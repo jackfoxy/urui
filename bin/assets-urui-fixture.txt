@@ -1,0 +1,12 @@
+# face   path (relative to the urui checkout), in binding order
+# The fixture is urui's own consumer: digesting it pins the shell's output
+# the way W0.1 pinned graph-viz's, so W3.3 and W3.6 have a before/after on
+# both ends of the extraction.
+urui    desk/sur/urui.hoon
+uclay   desk/lib/urui-clay.hoon
+ucss    desk/lib/urui-css.hoon
+uace    desk/lib/urui-ace.hoon
+ucfg    desk/lib/urui-config.hoon
+ujs     desk/lib/urui-js.hoon
+shell   desk/lib/urui-shell.hoon
+fix     tests/fixture/lib/urui-fixture-web.hoon
