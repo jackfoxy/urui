@@ -1,0 +1,250 @@
+::  Browser assets for %urui-fixture, the consumer-neutral test app.
+::
+::  This is urui's own consumer: the smallest application that exercises
+::  every part of the contract, named after nothing real.  It exists so
+::  the shell can be tested without graph-viz, obelisk, or heathcliff
+::  present, and so a contract change that only a real consumer would
+::  notice fails here first.
+::
+::  Two document kinds, three areas, five chords, and one endpoint set —
+::  the shapes graph-viz uses, with none of its vocabulary.
+::
+/-  urui
+/+  shell=urui-shell, ucss=urui-css, ujs=urui-js
+/+  ucfg=urui-config, uace=urui-ace
+|%
+::
+++  config
+  ^-  app-config:urui
+  :*  :*  name=%urui-fixture
+          title='urui fixture'
+          base='/apps/urui-fixture'
+          storage-key='urui-fixture.session.v1'
+          storage-version=1
+      ==
+      ::  two kinds: one editable source, one read-mostly note
+      :~  :*  name=%text
+              label='Text'
+              untitled='Untitled'
+              ext=%txt
+              mime='text/plain; charset=utf-8'
+              tabs=&
+              refs=&
+          ==
+          :*  name=%note
+              label='Note'
+              untitled='Preview'
+              ext=%md
+              mime='text/markdown; charset=utf-8'
+              tabs=&
+              refs=&
+          ==
+      ==
+      :*  transport=%header
+          path-header=`'x-urui-fixture-path'
+          flag-header=`'x-urui-fixture-overwrite'
+          browse='/apps/urui-fixture/file/{kind}/browse'
+          load='/apps/urui-fixture/file/{kind}/load'
+          save='/apps/urui-fixture/file/{kind}/save'
+          delete='/apps/urui-fixture/file/{kind}/delete'
+      ==
+      ::  the same numbers graph-viz runs with, so a limit that only
+      ::  matters at graph-viz's scale still matters here
+      :*  render-debounce=350
+          save-debounce=150
+          min-explorer=180
+          divider=10
+          pane-min=25
+          pane-max=70
+          narrow=760
+          max-source=262.144
+      ==
+      slots
+      shortcuts
+      :~  [%idle 'Ready']
+          [%working 'Working…']
+          [%saved 'Saved']
+          [%failed 'Failed']
+      ==
+      docs-root=`'/docs/d/urui-fixture/'
+      share-param=~
+      :~  [%text-files 'Text Files']
+          [%note-files 'Note Files']
+      ==
+      :*  base='/apps/urui-fixture/ace'
+          global='uruiFixtureAceAssets'
+          version='1.44.0'
+          light='ace/theme/github'
+          dark='ace/theme/monokai'
+          exts=~['beautify' 'prompt' 'searchbox' 'settings-menu']
+          use-worker=|
+      ==
+  ==
+::
+++  slots
+  ::  The session record, key for key.
+  ::
+  ::  Ordered as it is written, so a reader can compare this list with a
+  ::  stored record side by side.
+  ^-  (list slot:urui)
+  :~  ['source' %app %scalar ~]
+      ['paneWidth' %urui %scalar ~]
+      ['explorerWidth' %urui %scalar ~]
+      ['explorerOpen' %urui %scalar ~]
+      ['explorerView' %urui %scalar ~]
+      ['explorerOrder' %urui %scalar ~]
+      ['docsTabs' %urui %tabs ~]
+      ['nextDocs' %urui %next ~]
+      ['refTabs' %urui %tabs ~]
+      ['nextRef' %urui %next ~]
+      ['textTabs' %urui %tabs `%text]
+      ['activeTextTabId' %urui %active `%text]
+      ['nextTextTab' %urui %next `%text]
+      ['noteTabs' %urui %tabs `%note]
+      ['activeNoteTabId' %urui %active `%note]
+      ['nextNoteTab' %urui %next `%note]
+      ['view' %app %record ~]
+  ==
+::
+++  shortcuts
+  ::  Five chords with the shapes graph-viz owns: run, save, save-as,
+  ::  and two view commands.
+  ^-  (list shortcut:urui)
+  :~  ['Ctrl-Enter' 'echo' %always]
+      ['Ctrl-S' 'save' %always]
+      ['Ctrl-Shift-S' 'save-as' %always]
+      ['Ctrl-0' 'reset-view' %preview]
+      ['Ctrl-1' 'fit-view' %preview]
+  ==
+::
+++  spec
+  ^-  shell-spec:urui
+  :*  config
+      brand
+      toolbar
+      [reference-area editor-area result-area]
+      help
+      dialogs=~
+      styles=~
+      scripts=~['/apps/urui-fixture/app.js']
+  ==
+::
+++  brand
+  ^-  marl
+  :~  ;h1.app-title: urui fixture
+  ==
+::
+++  toolbar
+  ^-  marl
+  :~  ;button#echo.primary(type "button"): Echo
+      ;label.toggle
+        ;input#auto-echo(type "checkbox", checked "");
+        ;span: Auto
+      ==
+  ==
+::
+++  reference-area
+  ^-  area:urui
+  :*  role=%reference
+      id='explorer'
+      label='Fixture explorer'
+      heading=`'Files'
+      status-id=~
+      kind=~
+      strip=&
+      controls=~
+      body=~[;div#explorer-panels.explorer-panels;]
+      secondary=~
+  ==
+::
+++  editor-area
+  ^-  area:urui
+  :*  role=%editor
+      id='editor-pane'
+      label='Fixture editor'
+      heading=`'Source'
+      status-id=`'source-status'
+      kind=`%text
+      strip=&
+      controls=~[;button#save-text(type "button"):"Save"]
+      body=~[;div#editor.editor-host(aria-label "Source");]
+      secondary=~
+  ==
+::
+++  result-area
+  ^-  area:urui
+  ::  Area 3 has no default: the fixture supplies a <pre>, exactly as a
+  ::  real consumer supplies its preview, grid, or report.
+  :*  role=%result
+      id='result-pane'
+      label='Fixture result'
+      heading=`'Result'
+      status-id=`'result-status'
+      kind=`%note
+      strip=&
+      controls=~[;button#save-note(type "button"):"Save"]
+      body=~[;pre#fixture-result.fixture-result;]
+      secondary=`secondary-editor
+  ==
+::
+++  secondary-editor
+  ^-  editor:urui
+  :*  id='result-editor'
+      label='Result source'
+      mode='ace/mode/text'
+      wrap=&
+      read-only=|
+      max-bytes=262.144
+  ==
+::
+++  help
+  ^-  marl
+  :~  ;p: The fixture exists to test urui, and has no documentation.
+  ==
+::
+++  page
+  ^-  @t
+  (crip (en-xml:html (build:shell spec)))
+::
+++  css
+  ^-  @t
+  %+  rap  3
+  :~  %-  compose:ucss
+      :~  %tokens  %shell  %explorer  %tabs
+          %dialogs  %controls  %responsive
+      ==
+      app-css
+  ==
+::
+++  javascript
+  ^-  @t
+  %+  rap  3
+  :~  (emit:ucfg config)
+      core:ujs
+      app-js
+  ==
+::
+++  ace-config-js
+  ::  `config` is an arm: bind it before reaching into it, or the wing
+  ::  resolves against the arm rather than its product.
+  ^-  @t
+  =/  app=app-config:urui  config
+  (config-js:uace ace-spec.app)
+::
+++  app-css
+  ::  The fixture's own rules: enough to see the result area.
+  ^-  @t
+  '''
+  .fixture-result {
+    white-space: pre-wrap;
+    font-family: monospace;
+  }
+  '''
+::
+++  app-js
+  ::  The fixture's own script: the hooks a real consumer supplies.
+  ^-  @t
+  '''
+  window.uruiFixture = {ready: true};
+  '''
+--
