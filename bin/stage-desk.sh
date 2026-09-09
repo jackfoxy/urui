@@ -2,10 +2,9 @@
 #
 # stage-desk.sh — materialize a self-contained desk directory.
 #
-# urui is source-only: consumers reach its files through symlinks, and a
-# symlink must never leave the developer's filesystem.  This script copies
-# link targets (rsync -L / cp -rL) and refuses to emit a tree that still
-# contains one.
+# Assemble urui's disposable fixture from its sources and standard desk
+# dependencies. Consumer desks use ordinary synced files and can be copied
+# directly. The output of this assembler contains only regular files.
 #
 # Usage:
 #   bin/stage-desk.sh [options] <out-dir>
@@ -18,9 +17,8 @@
 #   --no-kelvin     do not copy sys.kelvin — use when staging *into* a desk
 #                   made by |new-desk, which already has the ship's own
 #
-# The %base dependency is explicit on purpose: urui vendors nothing from
-# the standard desk, so a staged desk that needs /lib/server.hoon says
-# where it came from.
+# The fixture's %base dependency is explicit: a staged desk that needs
+# /lib/server.hoon says where it came from.
 #
 set -euo pipefail
 

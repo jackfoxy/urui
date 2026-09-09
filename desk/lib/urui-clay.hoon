@@ -1,32 +1,58 @@
-::  urui-clay: clay path validation and directory listing.
-::
-::  Parameterized on the storage root and the allowed extensions, so a
-::  consumer supplies only its own root and extension set.
-::
-::  Phase 3 (W3.1) fills these arms from the extracted helpers.
-::
 |%
-::
-++  file-path
-  ::  Validate a client-supplied relative path against one root.
+  ::  Clay paths relative to a consumer's storage root and browse JSON.
   ::
-  ::  Returns ~ when the path is empty, absolute-only, or contains a
-  ::  `.` or `..` segment.
+++  file-path
+  ::  Preserve an allowed suffix; otherwise append the first extension.
+  ::  An empty extension list cannot name a file.
   |=  [root=path raw=@t exts=(list @ta)]
   ^-  (unit path)
-  ~
+  ?:  =(~ exts)  ~
+  =/  parsed  (relative-path raw)
+  ?~  parsed  ~
+  =/  rel=path  u.parsed
+  =/  suffix=@ta  (rear rel)
+  =?  rel  !(lien exts |=(ext=@ta =(ext suffix)))
+    (snoc rel (head exts))
+  `(weld root rel)
 ::
 ++  browse-path
-  ::  Validate a directory path for a browse request.
-  ::
+  ::  Only the empty string selects the root; slash-only paths fail.
   |=  [root=path raw=@t]
   ^-  (unit path)
-  ~
+  ?:  =('' raw)  `root
+  =/  parsed  (relative-path raw)
+  ?~  parsed  ~
+  `(weld root u.parsed)
 ::
 ++  browse-json
-  ::  Encode one directory listing as the browse response.
-  ::
   |=  [file=? children=(list @ta)]
   ^-  json
-  ~
+  %-  pairs:enjs:format
+  :~  ['file' b+file]
+      ['children' a+(turn children |=(name=@ta s+name))]
+  ==
+::
+++  relative-path
+  ::  Strip leading slashes, parse Clay syntax, and reject traversal.
+  |=  raw=@t
+  ^-  (unit path)
+  =/  clean=@t
+    =/  chars=tape  (trip raw)
+    |-  ^-  @t
+    ?~  chars  ''
+    ?.  =('/' i.chars)  (crip chars)
+    $(chars t.chars)
+  =/  parsed=(unit path)
+    %-  mole  |.
+    (stab (cat 3 '/' clean))
+  ?~  parsed  ~
+  =/  rel=path  u.parsed
+  ?:  =(~ rel)  ~
+  ?.  %+  levy  rel
+      |=  part=@ta
+      ?&  !=('.' part)
+          !=('..' part)
+      ==
+    ~
+  `rel
 --

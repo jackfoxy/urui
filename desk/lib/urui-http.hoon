@@ -1,31 +1,34 @@
-::  urui-http: eyre response helpers shared by consuming agents.
-::
-::  Keeps every route string, header name, and status code in the
-::  consumer; urui owns only the shape of the reply.
-::
-::  Phase 3 (W3.2) fills these arms.
-::
 |%
+  ::  Exact asset lookup and HTTP payloads; policy belongs to the consumer.
+  ::
++$  asset  [content-type=@t body=octs]
 ::
 ++  respond
-  ::  One complete http reply.
-  ::
-  |=  [status=@ud =mime]
+  ::  Preserve the supplied content type, byte length, and body bytes.
+  |=  [status=@ud =asset]
   ^-  simple-payload:http
-  [[status ~] `q.mime]
+  [[status ~[['content-type' content-type.asset]]] `body.asset]
 ::
 ++  asset-route
-  ::  Match a request url against an application's asset table.
-  ::
-  |=  [base=@t url=@t assets=(list [suffix=@t =mime])]
-  ^-  (unit mime)
-  ~
+  ::  Suffixes are literal, including '' and '/'. Ignore only the query.
+  ::  First matching entry wins; no prefix or directory fallback.
+  |=  [base=@t url=@t assets=(list [suffix=@t =asset])]
+  ^-  (unit asset)
+  =/  raw=tape  (trip url)
+  =/  query  (find "?" raw)
+  =/  clean=@t  ?~(query url (crip (scag u.query raw)))
+  |-  ^-  (unit asset)
+  ?~  assets  ~
+  ?:  =(clean (cat 3 base suffix.i.assets))  `asset.i.assets
+  $(assets t.assets)
 ::
 ++  require-auth
-  ::  Gate a request on eyre's authentication flag.
-  ::
-  |=  [authenticated=? payload=simple-payload:http]
+  ::  The consumer supplies its refusal, including status and body policy.
+  |=  $:  authenticated=?
+          payload=simple-payload:http
+          refused=simple-payload:http
+      ==
   ^-  simple-payload:http
   ?:  authenticated  payload
-  [[403 ~] ~]
+  refused
 --
