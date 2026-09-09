@@ -113,6 +113,14 @@ lengths, asset-table lookup, and consumer-defined authentication refusals.
 Graph-viz uses tables for GET assets and POST actions with common file
 validation. Its URLs, statuses, headers, and response bodies are preserved.
 
+W3.3 extracts the seven CSS sections. Compose `%tokens %controls %shell
+%explorer %tabs %dialogs %responsive`, then append application rules with
+`rap 3`. Base controls precede component overrides; `compose` itself adds
+no separators and preserves the requested order, including repetitions.
+Graph-viz retains preview, inspector, zoom, and fullscreen rules. Regrouping
+changes its CSS digest and its page digest because the page embeds CSS;
+the HTML outside the style block and the JavaScript remain byte-identical.
+
 ## License
 
 MIT+n — see [LICENSE](LICENSE).

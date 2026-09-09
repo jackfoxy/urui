@@ -1,25 +1,79 @@
 ::  Tests for /lib/urui-css.
 ::
-::  The sections are empty until W3.3, so these arms pin the only behavior
-::  that exists: composition is a pure concatenation in the order given and
-::  never crashes.  W3.3 replaces them with order and token assertions —
-::  the section list is a `$?` mold, so an unknown name is a build failure
-::  rather than something to test for at runtime.
-::
 /+  *test, ucss=urui-css
 |%
 ::
-++  test-compose-of-nothing-is-empty
-  (expect-eq !>('') !>((compose:ucss ~)))
-::
-++  test-compose-of-every-section-is-empty-today
+++  test-compose-preserves-order
   =/  all=(list section:ucss)
-    :~  %tokens  %shell  %explorer  %tabs
-        %dialogs  %controls  %responsive
+    :~  %tokens  %controls  %shell  %explorer
+        %tabs  %dialogs  %responsive
     ==
+  =/  expected=@t
+    %+  rap  3
+    :~  tokens:ucss  controls:ucss  shell:ucss  explorer:ucss
+        tabs:ucss  dialogs:ucss  responsive:ucss
+    ==
+  =/  repeated=@t  (rap 3 ~[tabs:ucss tokens:ucss tabs:ucss])
   ;:  weld
-    (expect-eq !>('') !>((compose:ucss all)))
-    ::  concatenation, not a join: no separator is introduced
-    (expect-eq !>((compose:ucss all)) !>((compose:ucss (weld all all))))
+    (expect-eq !>('') !>((compose:ucss ~)))
+    (expect-eq !>(expected) !>((compose:ucss all)))
+    %+  expect-eq  !>(repeated)
+    !>((compose:ucss ~[%tabs %tokens %tabs]))
   ==
+::
+++  test-sections-cover-shared-rules
+  =/  cases=(list [name=section:ucss needle=@t])
+    :~  [%tokens '--surface-alt:']
+        [%shell '.workbench {']
+        [%explorer '.explorer-file-tree {']
+        [%tabs '.document-tab-control {']
+        [%dialogs '.docs-help-group[open]']
+        [%controls '.icon-button {']
+        [%responsive '@media (max-width: 760px)']
+    ==
+  %-  zing
+  %+  turn  cases
+  |=  [name=section:ucss needle=@t]
+  =/  style  (trip (compose:ucss ~[name]))
+  (expect !>(?=(^ (find (trip needle) style))))
+::
+++  test-theme-tokens
+  =/  style  (trip tokens:ucss)
+  =/  needles=(list @t)
+    :~  'color-scheme: light'  'color-scheme: dark'
+        ':root[data-effective-theme=\'dark\']'
+        '--surface-alt: #fafafa'  '--surface-alt: #22221f'
+        '--preview-background: #ffffff'
+        '--preview-background: #11110f'
+        '--inspector-background: #fffbeb'
+        '--inspector-background: #33270e'
+        '--background:'  '--surface:'  '--border:'  '--ink:'
+        '--muted:'  '--accent:'  '--accent-text:'  '--focus:'
+        '--danger:'  '--danger-background:'  '--danger-border:'
+        '--editor-error:'  '--preview-grid:'  '--floating-control:'
+        '--selection-hover:'  '--selection-active:'  '--spinner-track:'
+        '--state-ink:'  '--state-title:'  '--inspector-border:'
+        '--inspector-ink:'  '--editor-width:'
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=@t
+  (expect !>(?=(^ (find (trip needle) style))))
+::
+++  test-shared-sections-exclude-app-rules
+  =/  style
+    %-  trip
+    %-  compose:ucss
+    :~  %tokens  %controls  %shell  %explorer
+        %tabs  %dialogs  %responsive
+    ==
+  =/  selectors=(list @t)
+    :~  '.preview'  '.inspector'  '.zoom-'  '.fullscreen'
+        '.visual-tools'  '.attribute-form'  '#shape-control'
+        '#svg-source'  'filter: invert(1)'
+    ==
+  %-  zing
+  %+  turn  selectors
+  |=  selector=@t
+  (expect !>(?=(~ (find (trip selector) style))))
 --

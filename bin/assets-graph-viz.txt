@@ -1,4 +1,5 @@
 # face   path (relative to the consumer checkout), in binding order
 gg     desk/sur/graph.hoon
 gviz   desk/sur/gviz.hoon
+ucss   desk/lib/urui-css.hoon
 web    desk/lib/gviz-web.hoon

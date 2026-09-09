@@ -210,8 +210,8 @@
   ^-  @t
   %+  rap  3
   :~  %-  compose:ucss
-      :~  %tokens  %shell  %explorer  %tabs
-          %dialogs  %controls  %responsive
+      :~  %tokens  %controls  %shell  %explorer
+          %tabs  %dialogs  %responsive
       ==
       app-css
   ==
