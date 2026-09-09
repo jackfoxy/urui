@@ -248,6 +248,10 @@
   ::  The fixture's own script: the hooks a real consumer supplies.
   ^-  @t
   '''
-  window.uruiFixture = {ready: true};
+  window.urui.boot({
+    onReady(api) {
+      window.uruiFixture = {ready: true, api};
+    }
+  });
   '''
 --

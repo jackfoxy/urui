@@ -134,6 +134,11 @@ worker policy. Graph-viz keeps its DOT mode and configuration URL. The
 fixture can load a real text editor using the shared runtime.
 See [the accepted configuration diff](docs/w3.4-ace-config.md).
 
+W3.5 publishes the frozen `window.urui` API, one-shot boot dispatcher,
+parameterized theme bootstrap, and shared Ace editor adapter. Graph-viz
+composes the shared core before its application tail and supplies its
+behavior through boot hooks. The fixture exercises the same public contract.
+
 ## License
 
 MIT+n — see [LICENSE](LICENSE).

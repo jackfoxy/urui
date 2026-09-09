@@ -4,4 +4,6 @@ gviz   desk/sur/gviz.hoon
 urui   desk/sur/urui.hoon
 uace   desk/lib/urui-ace.hoon
 ucss   desk/lib/urui-css.hoon
+ucfg   desk/lib/urui-config.hoon
+ujs    desk/lib/urui-js.hoon
 web    desk/lib/gviz-web.hoon

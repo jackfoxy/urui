@@ -26,5 +26,6 @@ if [[ -z "$APP_JS" ]]; then
 fi
 
 node --check "$APP_JS"
+URUI_APP_JS="$APP_JS" node --test "$ROOT/tests/browser/urui-core.test.js"
 node "$ROOT/tests/browser/run-scenarios.js" "$APP_JS"
 node --test "$ROOT/tests/browser/ace-config.test.js"
