@@ -46,16 +46,20 @@ function assemble(bindings, expression, base = root) {
 
 async function compileFixture(spec) {
   const bindings = [...URUI_BINDINGS, ['fix', `tests/fixture/lib/${spec}.hoon`]];
-  const source = assemble(bindings, '[page:fix css:fix javascript:fix]');
+  const source = assemble(bindings,
+    '[page:fix css:fix javascript:fix ace-config-js:fix]');
   let problem;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      const cords = parseCords(await evaluate(source), 3);
+      const cords = parseCords(await evaluate(source), 4);
       if (!cords[0].includes('</html>')) {
         throw new Error('vere eval returned truncated page HTML');
       }
       new vm.Script(cords[2], {filename: `${spec}.js`});
-      return {page: cords[0], css: cords[1], javascript: cords[2]};
+      new vm.Script(cords[3], {filename: `${spec}-ace-config.js`});
+      return {
+        page: cords[0], css: cords[1], javascript: cords[2], aceConfig: cords[3]
+      };
     } catch (cause) {
       problem = cause;
     }
@@ -90,10 +94,18 @@ async function main() {
     if (url === `${base}/app.css`) {
       return send('text/css; charset=utf-8', assets.css);
     }
+    if (url === `${base}/ace/config.js`) {
+      return send('text/javascript; charset=utf-8', assets.aceConfig);
+    }
     if (url.startsWith(`${base}/ace/`)) {
-      const file = path.join(aceRoot, url.slice(`${base}/ace/`.length));
+      const requested = url.slice(`${base}/ace/`.length);
+      const name = requested === 'ext-settings_menu.js'
+        ? 'ext-settings-menu.js' : requested;
+      const file = path.join(aceRoot, name);
       if (file.startsWith(aceRoot) && fs.existsSync(file)) {
-        return send('text/javascript; charset=utf-8', fs.readFileSync(file));
+        const type = name.endsWith('.txt')
+          ? 'text/plain; charset=utf-8' : 'text/javascript; charset=utf-8';
+        return send(type, fs.readFileSync(file));
       }
     }
     response.writeHead(404, {'content-type': 'text/plain'});

@@ -67,6 +67,29 @@ class SyncTests(unittest.TestCase):
         self.assertEqual((self.dest / "desk/lib/urui-new.hoon").read_text(),
                          "new")
 
+    def test_ace_sync_preserves_application_modes(self):
+        shared = (
+            "ace.js", "theme-github.js", "theme-monokai.js",
+            "ext-beautify.js", "ext-prompt.js", "ext-searchbox.js",
+            "ext-settings-menu.js", "license.txt", "README.md",
+        )
+        source = self.source / "desk/web/ace"
+        target = self.dest / "desk/web/ace"
+        source.mkdir(parents=True)
+        target.mkdir(parents=True)
+        for name in shared:
+            (source / name).write_text(name)
+        (target / "mode-dot.js").write_text("consumer DOT mode")
+        self.assertEqual(self.run_sync().returncode, 0)
+        for name in shared:
+            self.assertEqual((target / name).read_text(), name)
+            self.assertFalse((target / name).is_symlink())
+        self.assertEqual((target / "mode-dot.js").read_text(),
+                         "consumer DOT mode")
+        self.assertEqual(self.run_sync("verify", "--strict").returncode, 0)
+        (target / "ace.js").write_text("local runtime change")
+        self.assertEqual(self.run_sync("verify", "--strict").returncode, 1)
+
     def test_directory_link_is_refused(self):
         shutil.rmtree(self.dest / "desk/lib")
         (self.dest / "desk/lib").symlink_to(self.source / "desk/lib")

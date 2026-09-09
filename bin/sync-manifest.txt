@@ -6,3 +6,12 @@ desk/lib/urui-css.hoon
 desk/lib/urui-http.hoon
 desk/lib/urui-js.hoon
 desk/lib/urui-shell.hoon
+desk/web/ace/ace.js
+desk/web/ace/theme-github.js
+desk/web/ace/theme-monokai.js
+desk/web/ace/ext-beautify.js
+desk/web/ace/ext-prompt.js
+desk/web/ace/ext-searchbox.js
+desk/web/ace/ext-settings-menu.js
+desk/web/ace/license.txt
+desk/web/ace/README.md

@@ -47,6 +47,19 @@ class StagingTests(unittest.TestCase):
         self.assertFalse(staged.is_symlink())
         self.assertEqual(staged.read_bytes(), framework.read_bytes())
 
+    def test_source_desk_packages_its_javascript_mark(self):
+        result = subprocess.run(
+            ["bash", str(SCRIPT), "--no-base", "--no-kelvin",
+             str(self.output)], capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        mark = self.output / "mar/js.hoon"
+        self.assertTrue(mark.is_file())
+        self.assertFalse(mark.is_symlink())
+        self.assertEqual(mark.read_bytes(),
+                         (SCRIPT.parents[1] / "desk/mar/js.hoon").read_bytes())
+        self.assertTrue((self.output / "web/ace/ace.js").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

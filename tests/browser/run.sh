@@ -27,3 +27,4 @@ fi
 
 node --check "$APP_JS"
 node "$ROOT/tests/browser/run-scenarios.js" "$APP_JS"
+node --test "$ROOT/tests/browser/ace-config.test.js"

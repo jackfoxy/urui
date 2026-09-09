@@ -74,9 +74,12 @@
       :*  base='/apps/urui-fixture/ace'
           global='uruiFixtureAceAssets'
           version='1.44.0'
+          mode='ace/mode/text'
           light='ace/theme/github'
           dark='ace/theme/monokai'
-          exts=~['beautify' 'prompt' 'searchbox' 'settings-menu']
+          :~  'ace/ext/beautify'  'ace/ext/prompt'
+              'ace/ext/searchbox'  'ace/ext/settings_menu'
+          ==
           use-worker=|
       ==
   ==

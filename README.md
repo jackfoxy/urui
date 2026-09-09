@@ -67,7 +67,7 @@ document kinds, three areas, five chords, one endpoint set.
 
 ```bash
 #  Hoon: the libs and their unit tests, in a disposable test desk.
-#  lib/test.hoon is vendored; preserve the ship's marks and sys.kelvin.
+#  lib/test.hoon and mar/js.hoon are vendored; preserve other ship files.
 rsync -rL desk/ <pier>/urui/                # no --delete
 #    then in the dojo:  |commit %urui ; -test /=urui=/tests ~
 
@@ -87,9 +87,15 @@ VERE=/path/to/vere bin/asset-digest.sh --consumer ../graph-viz
 VERE=/path/to/vere bin/asset-digest.sh --spec bin/assets-urui-fixture.txt
 ```
 
-The source desk includes its test framework. The fixture still needs staging
-to merge its agent and standard dependencies. Consumer desks can be copied directly. After copying, run these separately in the
-dojo (substitute the fixture or consumer desk as appropriate):
+The source desk includes its test framework and the JavaScript mark needed
+to ingest the vendored Ace files. Copy `desk/mar/` along with the libraries
+and assets; a desk without `mar/js.hoon` rejects `.js` files with
+`%no-cast-between %mime %js` during `|commit`.
+
+The fixture still needs staging to merge its agent and standard
+dependencies. Consumer desks can be copied directly. After copying, run
+these separately in the dojo (substitute the fixture or consumer desk as
+appropriate):
 
 ```hoon
 |commit %urui
@@ -120,6 +126,13 @@ no separators and preserves the requested order, including repetitions.
 Graph-viz retains preview, inspector, zoom, and fullscreen rules. Regrouping
 changes its CSS digest and its page digest because the page embeds CSS;
 the HTML outside the style block and the JavaScript remain byte-identical.
+
+W3.4 vendors the nine shared Ace files and generates each consumer's loader
+configuration from `$ace-spec`. `mode` and `exts` contain full Ace module
+ids; the consumer supplies its global name, base URL, version, themes and
+worker policy. Graph-viz keeps its DOT mode and configuration URL. The
+fixture can load a real text editor using the shared runtime.
+See [the accepted configuration diff](docs/w3.4-ace-config.md).
 
 ## License
 

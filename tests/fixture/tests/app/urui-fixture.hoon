@@ -93,6 +93,16 @@
   =/  cards  -:(poke-http req(authenticated %.n))
   (expect-eq !>(403) !>((response-status cards)))
 ::
+++  test-ace-config-is-generated
+  =/  req  (request %'GET' '/apps/urui-fixture/ace/config.js' ~)
+  =/  cards  -:(poke-http req)
+  =/  body  (trip (response-body cards))
+  ;:  weld
+    (expect-eq !>(200) !>((response-status cards)))
+    (expect !>(?=(^ (find "uruiFixtureAceAssets" body))))
+    (expect !>(?=(^ (find "ace/mode/text" body))))
+  ==
+::
 ++  test-echo-returns-the-posted-body
   =/  posted  (as-octs:mimes:html 'hello fixture')
   =/  req  (request %'POST' '/apps/urui-fixture/echo' `posted)
