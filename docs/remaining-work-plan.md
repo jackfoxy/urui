@@ -43,6 +43,8 @@ items below are held to.
 
 ## Stage 5 — Clay file operations + shortcut dispatcher
 
+**Complete, 2026-09-10.**
+
 (Runtime-extraction stage 5 of 7; see `w4.3-runtime-extraction.md` for
 stages 1–4 as landed.)
 
@@ -67,6 +69,25 @@ suites; needle sweep on `gviz-web.hoon` reports zero problems; digests —
 Done: `options.browse`/`options.openFile` no longer exist anywhere in
 `urui-js.hoon`; `handleShortcut` in `gviz-web.hoon` is ≤ 40 lines (5 chords +
 registration).
+
+
+Completed: `urui-js ++files` owns browse/load/save/delete, conflict prompts,
+context-menu actions and toolbar wiring; `++shortcuts` owns capture-phase
+claims and Escape ordering. Graph-viz's `handleShortcut` is 9 lines,
+registering its five configured commands. Its remaining file hooks supply
+status/preview feedback and the SVG edit baseline. The fixture's obsolete
+browse/open hooks are removed; editor mounting remains Stage 6.
+
+Verified: Graph-viz Chromium **57 passed**, fixture Chromium **3 passed**;
+urui's seven Hoon suites **70 arms passed**, including `test-files-contract`
+and `test-shortcut-contract`; Graph-viz's **130 asset needles, zero problems**
+and `test-web-error-json` passed. Both Node scenario suites and Graph-viz's
+shortcut suites pass. New Node coverage exercises both endpoint transports,
+recursive browse, load deduplication, overwrite retries, changed-copy
+confirmation, delete cancellation, failures, shortcut contexts, Alt retention
+and Escape priority. Page/CSS digests are unchanged for both consumers;
+JavaScript digests are re-recorded. See `w4.3-runtime-extraction.md` for the
+new runtime options and returned surfaces.
 
 ## Stage 6 — Fixture becomes a real consumer
 

@@ -273,7 +273,6 @@
 
   const fixture = {
     calls: fixtureCalls,
-    files: {text: ['notes/txt', 'deep/leaf/txt'], note: []},
     source: 'fixture source',
     view: {scale: 1}
   };
@@ -290,8 +289,6 @@
     onResize: fixtureHook('runtime', 'resize', undefined),
     onHelpOpen: fixtureHook('runtime', 'helpOpen', undefined),
     onTabsRendered: fixtureHook('runtime', 'tabsRendered', undefined),
-    browse: async (kind) => fixture.files[kind] || [],
-    openFile: fixtureHook('files', 'open', undefined),
     session: {
       read: (key) => {
         if (key === 'source') return fixture.source;

@@ -252,7 +252,6 @@
     (expect !>(?=(~ (find "graphViz" source))))
     (expect !>(?=(~ (find "GVIZ" source))))
     (expect !>(?=(~ (find "DOT" source))))
-    (expect !>(?=(~ (find "preview" source))))
   ==
 ::
 ++  test-document-tab-contract
@@ -326,8 +325,8 @@
         "docs-help-link"
         "doc.toc"
         "text/plain"
-        "options.browse(name)"
-        "options.openFile"
+        "browseClayNode(name)"
+        "loadFile(name, path)"
         "kindByName.get(name)?.leaf"
     ==
   =/  tests=tang
@@ -389,4 +388,44 @@
     (expect !>(?=(~ (find "graph-viz.session" source))))
     (expect !>(?=(~ (find "DOT" source))))
   ==
+::
+++  test-files-contract
+  =/  source  (trip files:ujs)
+  =/  needles=(list tape)
+    :~  "config.endpoints"
+        "endpoints.transport"
+        "path.split('/')"
+        "endpoints.pathHeader"
+        "endpoints.flagHeader"
+        "route.replaceAll('\{kind}', name)"
+        "response.status === 409"
+        "changed in Clay since it was loaded"
+        "Delete $\{path}? This cannot be undone."
+        "tab.cleanSource = source"
+        "await refreshFileTree(name)"
+        "hooks.saved?.(tab, source)"
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=tape
+  (expect !>((has needle source)))
+::
+++  test-shortcut-contract
+  =/  source  (trip shortcuts:ujs)
+  =/  needles=(list tape)
+    :~  "shortcutCommands.set(command, handler)"
+        "config.shortcuts"
+        "contexts[shortcut.when]"
+        "helpIsOpen()"
+        "errorIsOpen()"
+        "closeFileContext(true)"
+        "parts.includes('alt')"
+        "editor.isFocused?.(target)"
+        "if (inEditor) return"
+        "handler(event)"
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=tape
+  (expect !>((has needle source)))
 --

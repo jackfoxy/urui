@@ -8,13 +8,19 @@ commentary. The user performs Git commits. Do not commit unless asked.
 
 ## Current state
 
+Stage 5 completed after WD.1. Continue with **Stage 6** in
+`docs/remaining-work-plan.md`, the live plan. Stage 5 verification and its
+runtime contract are recorded in `docs/w4.3-runtime-extraction.md`.
+The verification and uncommitted-file lists below describe the older
+Stage 4 session; use `git status` for the current working tree.
+
 W4.2 is committed in both repositories — urui `163df80`, graph-viz
 `ac190d6`. Everything since is **uncommitted**.
 
 **W4.3 is open.** It could not be done as written: it presumes the generic
 browser runtime already lives in urui, and W3.5 as executed extracted only
 the contract. The agreed answer (2026-09-10) was to extract the runtime
-first, in seven stages. Four are done:
+first, in seven stages. Five are done:
 
 | Stage | Content | State |
 |---|---|---|
@@ -22,7 +28,7 @@ first, in seven stages. Four are done:
 | 2 | document tabs, plus the `leaf` field `$doc-kind` needed | done, verified |
 | 3 | explorer views, reference tabs, documentation tabs, `doc.toc`, the clay file tree and its context menu | done, verified |
 | 4 | persistence: the slot registry, load/save, the shared validators, the shared-source url parameter | done, verified |
-| 5 | clay file operations (`requestClayPath`) and the shortcut dispatcher | not started |
+| 5 | clay file operations and the shortcut dispatcher | done, verified |
 | 6 | the fixture becomes a real consumer: both Ace editors mounted, editor test hooks, `#editor-load-error` | not started |
 | 7 | W4.3 proper: move the specs | not started |
 
