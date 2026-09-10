@@ -14,8 +14,9 @@
 #   <sha256>  <bytes>  <asset>
 #
 # The digests are the Phase 3 gate. W3.3 accepts new CSS digests and a new
-# graph-viz page digest (its CSS is inline); W3.5 changes JavaScript and
-# W3.6 changes the fixture page. Other assets remain byte-identical.
+# graph-viz page digest (its CSS is inline); W3.5 changes JavaScript; W3.6
+# changes both pages and JavaScript because it fills the config emitter.
+# CSS remains byte-identical at W3.6.
 #
 # Compilation goes through `vere eval` rather than a ship: each /- or /+
 # dependency becomes an `=+  ^=  face` binding, in dependency order, read

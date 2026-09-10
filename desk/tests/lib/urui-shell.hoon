@@ -89,6 +89,58 @@
 ::
 ++  doc  (build:shell spec)
 ::
+++  full-config
+  ^-  app-config:urui
+  %*  .  config
+    storage-key.app-id      'probe.session.v1'
+    storage-version.app-id  1
+    kinds
+      :~  :*  name=%text
+              label='Text'
+              untitled='Untitled'
+              ext=%txt
+              mime='text/plain'
+              tabs=&
+              refs=&
+          ==
+          :*  name=%note
+              label='Note'
+              untitled='Preview'
+              ext=%md
+              mime='text/markdown'
+              tabs=&
+              refs=&
+          ==
+      ==
+    statuses         ~[[%ready 'Ready'] [%busy 'Busy'] [%empty 'Empty']]
+    permanent-views  ~[[%text-files 'Text Files'] [%note-files 'Note Files']]
+  ==
+::
+++  full-spec
+  ^-  shell-spec:urui
+  =/  full-editor=area:urui
+    %*  .  editor-area
+      strip  &
+    ==
+  =/  full-result=area:urui
+    %*  .  result-area
+      kind  `%note
+    ==
+  :*  full-config
+      brand=~[;h1.brand:"Probe"]
+      toolbar=~[;nav.toolbar(aria-label "Probe controls");]
+      :*  reference-area
+          full-editor
+          full-result
+      ==
+      help=~[;p.probe-help:"nothing to see"]
+      dialogs=~[;div#probe-dialog.dialog;]
+      styles=~['body { color: black; }']
+      scripts=~['/probe/app.js']
+  ==
+::
+++  full-doc  (build:shell full-spec)
+::
 ++  elements
   ::  Every element with this tag, depth first.
   ::
@@ -118,6 +170,11 @@
   |=  [=manx name=@tas]
   ^-  ?
   ?=(^ (skim a.g.manx |=([n=mane v=tape] =(name n))))
+::
+++  has-id
+  |=  [nodes=(list manx) id=tape]
+  ^-  ?
+  ?=(^ (skim nodes |=(kid=manx =(id (attribute kid %id)))))
 ::
 ++  panes
   ::  The three area sections, in document order.
@@ -279,5 +336,69 @@
   ;:  weld
     (expect-eq !>(1) !>((lent holders)))
     (expect-eq !>("probe-dialog") !>((attribute (snag 1 inside) %id)))
+  ==
+::
+++  test-full-shell-emits-explorer-regions
+  =/  asides  (elements full-doc %aside)
+  =/  tabs  (elements full-doc %button)
+  =/  panels
+    %+  skim  (elements (snag 0 asides) %div)
+    |=(kid=manx =("explorer-panel" (attribute kid %class)))
+  ;:  weld
+    (expect-eq !>("probe-reference") !>((attribute (snag 0 asides) %id)))
+    (expect-eq !>(%.y) !>((has-id tabs "text-files-tab")))
+    (expect-eq !>(%.y) !>((has-id tabs "note-files-tab")))
+    (expect-eq !>(2) !>((lent panels)))
+  ==
+::
+++  test-full-shell-emits-workspace-and-resizers
+  =/  sections  (elements full-doc %section)
+  =/  separators
+    %+  skim  ;:  weld  (elements full-doc %button)
+                       (elements full-doc %div)
+             ==
+    |=(kid=manx =("separator" (attribute kid %role)))
+  ;:  weld
+    (expect-eq !>(%.y) !>((has-id sections "workspace")))
+    (expect-eq !>(2) !>((lent separators)))
+    (expect-eq !>("explorer-resizer") !>((attribute (snag 0 separators) %id)))
+    (expect-eq !>("splitter") !>((attribute (snag 1 separators) %id)))
+  ==
+::
+++  test-full-shell-emits-document-tab-strips
+  =/  strips
+    %+  skim  (elements full-doc %div)
+    |=(kid=manx =("document-tabs" (attribute kid %class)))
+  =/  first-id  (attribute (snag 0 strips) %id)
+  =/  second-id  (attribute (snag 1 strips) %id)
+  ;:  weld
+    (expect-eq !>(2) !>((lent strips)))
+    (expect-eq !>("text-document-tabs") !>(first-id))
+    (expect-eq !>("note-document-tabs") !>(second-id))
+  ==
+::
+++  test-full-shell-emits-help-and-dialogs
+  =/  dialogs
+    %+  skim  (elements full-doc %aside)
+    |=(kid=manx =("dialog" (attribute kid %role)))
+  =/  menus
+    %+  skim  (elements full-doc %div)
+    |=(kid=manx =("menu" (attribute kid %role)))
+  ;:  weld
+    (expect-eq !>(2) !>((lent dialogs)))
+    (expect-eq !>("help-panel") !>((attribute (snag 0 dialogs) %id)))
+    (expect-eq !>("clay-error-modal") !>((attribute (snag 1 dialogs) %id)))
+    (expect-eq !>(1) !>((lent menus)))
+    (expect-eq !>("file-context-menu") !>((attribute (head menus) %id)))
+  ==
+::
+++  test-full-shell-emits-prepaint-style-and-assets
+  =/  scripts  (elements full-doc %script)
+  =/  styles  (elements full-doc %style)
+  ;:  weld
+    (expect-eq !>(2) !>((lent scripts)))
+    (expect-eq !>("") !>((attribute (snag 0 scripts) %src)))
+    (expect-eq !>("/probe/app.js") !>((attribute (snag 1 scripts) %src)))
+    (expect-eq !>(1) !>((lent styles)))
   ==
 --

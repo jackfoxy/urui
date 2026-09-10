@@ -6,4 +6,5 @@ uace   desk/lib/urui-ace.hoon
 ucss   desk/lib/urui-css.hoon
 ucfg   desk/lib/urui-config.hoon
 ujs    desk/lib/urui-js.hoon
+shell  desk/lib/urui-shell.hoon
 web    desk/lib/gviz-web.hoon

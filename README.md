@@ -82,7 +82,7 @@ npm install
 VERE=/path/to/vere tests/browser/run.sh
 VERE=/path/to/vere tests/browser/run-real.sh
 
-#  Phase 3 gate: assets must hash the same before and after extraction
+#  Phase 3 gate: compare assets with the accepted work-unit baselines
 VERE=/path/to/vere bin/asset-digest.sh --consumer ../graph-viz
 VERE=/path/to/vere bin/asset-digest.sh --spec bin/assets-urui-fixture.txt
 ```
@@ -138,6 +138,12 @@ W3.5 publishes the frozen `window.urui` API, one-shot boot dispatcher,
 parameterized theme bootstrap, and shared Ace editor adapter. Graph-viz
 composes the shared core before its application tail and supplies its
 behavior through boot hooks. The fixture exercises the same public contract.
+
+W3.6 emits every `$app-config` field as `window.URUI_CONFIG` and expands the
+shell to the explorer, workspace, document strips, resizers, help panel,
+context menu, and dialogs. Consumers now define their brand, controls,
+content, and extra dialogs as marl slots and build the page with
+`(build:shell spec)`. See [the Graph-reviewed page diff](docs/w3.6-page-diff.md).
 
 ## License
 

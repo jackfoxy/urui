@@ -10,7 +10,8 @@ test('fixture page presents the three areas', async ({page}) => {
   await page.goto('/apps/urui-fixture/');
   await expect(page).toHaveTitle('urui fixture');
 
-  const panes = page.locator('main.app-shell > section.pane');
+  const panes = page.locator(
+    '#workbench > .explorer-pane, #workspace > section.pane');
   await expect(panes).toHaveCount(3);
   await expect(panes.nth(0)).toHaveAttribute('id', 'explorer');
   await expect(panes.nth(1)).toHaveAttribute('id', 'editor-pane');
@@ -19,6 +20,16 @@ test('fixture page presents the three areas', async ({page}) => {
   await expect(panes.nth(0)).toHaveAttribute('data-role', 'reference');
   await expect(panes.nth(1)).toHaveAttribute('data-role', 'editor');
   await expect(panes.nth(2)).toHaveAttribute('data-role', 'result');
+
+  await expect(page.locator('#explorer-tabs')).toHaveAttribute(
+    'role', 'tablist');
+  await expect(page.locator('.document-tabs')).toHaveCount(2);
+  await expect(page.locator('[role="separator"]')).toHaveCount(2);
+  await expect(page.locator('#help-panel')).toHaveAttribute('role', 'dialog');
+  await expect(page.locator('#clay-error-modal')).toHaveAttribute(
+    'role', 'dialog');
+  await expect(page.locator('#file-context-menu')).toHaveAttribute(
+    'role', 'menu');
 
   //  area 3 has no default: the fixture supplied this body itself
   await expect(page.locator('#fixture-result')).toHaveCount(1);
