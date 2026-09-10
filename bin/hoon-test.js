@@ -46,6 +46,8 @@ function resolve(kind, token) {
   const relative = `desk/${folder}/${name}.hoon`;
   if (fs.existsSync(path.join(consumer, relative))) return [face, relative];
   if (fs.existsSync(path.join(uruiRoot, relative))) return [face, relative];
+  const fixture = `tests/fixture/${folder}/${name}.hoon`;
+  if (fs.existsSync(path.join(consumer, fixture))) return [face, fixture];
   throw new Error(`cannot resolve ${kind} ${name}`);
 }
 

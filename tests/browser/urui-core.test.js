@@ -87,7 +87,9 @@ test('fixture hooks are forwarded through the public API', () => {
   assert.equal(urui.dialog.confirm('continue?'), true);
   assert.equal(urui.dialog.prompt('name?'), 'fixture-name');
   assert.deepEqual(
-    Array.from(uruiFixture.calls, ({group, method}) => [group, method]),
+    Array.from(
+      uruiFixture.calls.slice(-4), ({group, method}) => [group, method]
+    ),
     [
       ['shell', 'status'],
       ['tabs', 'active'],

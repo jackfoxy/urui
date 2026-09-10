@@ -83,9 +83,14 @@
 ++  test-assets-answer-with-their-own-types
   =/  js  (poke-http (request %'GET' '/apps/urui-fixture/app.js' ~))
   =/  css  (poke-http (request %'GET' '/apps/urui-fixture/app.css' ~))
+  =/  ace  (poke-http (request %'GET' '/apps/urui-fixture/ace/ace.js' ~))
+  =/  theme
+    (poke-http (request %'GET' '/apps/urui-fixture/ace/theme-github.js' ~))
   ;:  weld
     (expect-eq !>(200) !>((response-status -.js)))
     (expect-eq !>(200) !>((response-status -.css)))
+    (expect-eq !>(200) !>((response-status -.ace)))
+    (expect-eq !>(200) !>((response-status -.theme)))
   ==
 ::
 ++  test-unauthenticated-request-is-refused

@@ -8,19 +8,17 @@ commentary. The user performs Git commits. Do not commit unless asked.
 
 ## Current state
 
-Stage 5 completed after WD.1. Continue with **Stage 6** in
-`docs/remaining-work-plan.md`, the live plan. Stage 5 verification and its
-runtime contract are recorded in `docs/w4.3-runtime-extraction.md`.
-The verification and uncommitted-file lists below describe the older
-Stage 4 session; use `git status` for the current working tree.
+Stage 6 completed after WD.1 and Stage 5. Continue with **Stage 7** in
+`docs/remaining-work-plan.md`, the live plan. Stage 5 and Stage 6 verification
+and contracts are recorded in `docs/w4.3-runtime-extraction.md`.
 
-W4.2 is committed in both repositories — urui `163df80`, graph-viz
-`ac190d6`. Everything since is **uncommitted**.
+Stage 5 is committed in both repositories — urui `381aa74`, graph-viz
+`8afc0a5`. Stage 6 is **uncommitted**.
 
 **W4.3 is open.** It could not be done as written: it presumes the generic
 browser runtime already lives in urui, and W3.5 as executed extracted only
 the contract. The agreed answer (2026-09-10) was to extract the runtime
-first, in seven stages. Five are done:
+first, in seven stages. Six are done:
 
 | Stage | Content | State |
 |---|---|---|
@@ -29,7 +27,7 @@ first, in seven stages. Five are done:
 | 3 | explorer views, reference tabs, documentation tabs, `doc.toc`, the clay file tree and its context menu | done, verified |
 | 4 | persistence: the slot registry, load/save, the shared validators, the shared-source url parameter | done, verified |
 | 5 | clay file operations and the shortcut dispatcher | done, verified |
-| 6 | the fixture becomes a real consumer: both Ace editors mounted, editor test hooks, `#editor-load-error` | not started |
+| 6 | the fixture becomes a real consumer: both Ace editors mounted, editor test hooks, `#editor-load-error` | done, verified |
 | 7 | W4.3 proper: move the specs | not started |
 
 `docs/w4.3-runtime-extraction.md` is the working record — the staging
@@ -38,9 +36,8 @@ surface, and the next step. **Read it before continuing.**
 
 **Mark W4.3 complete in the plan only when stage 7 lands**, with the usual
 completion note and the executed-test counts recorded in both READMEs.
-Nothing W4.3 itself asks for has been done yet: no spec has moved, and
-`urui/tests/browser/real/` still holds only `ace-assets.spec.js` and
-`fixture-smoke.spec.js`.
+No Stage 7 spec has moved. `fixture-editors.spec.js` is Stage 6 coverage and
+joins the existing `ace-assets.spec.js` and `fixture-smoke.spec.js`.
 
 ## Tooling added this session
 
@@ -58,16 +55,16 @@ Nothing W4.3 itself asks for has been done yet: no spec has moved, and
   the runtime cord they embed is ~2,400 lines. It needs `-test` on a ship.
   Locally, compile once and sweep its needles instead.
 
-## Verification, as of stage 4
+## Verification, as of Stage 6
 
-- `-test /=urui-fixture=/tests ~` on `~/piers/urui-zod`: **74 arms,
+- `-test /=urui-fixture=/tests ~` on a fresh disposable ship: **80 arms,
   `ok=%.y`**
-- Chromium: graph-viz **57 passed**, fixture **3 passed**
-- graph-viz: 10 Node scenarios, 8 shortcut tests
-- urui: 10 Node scenarios, 3 core tests, 1 Ace config test
-- urui's seven `/tests/lib` suites through `bin/hoon-test.js`: 68 arms
+- Chromium: fixture **6 passed**
+- graph-viz: doubles smoke passed
+- urui: 10 Node scenarios, core tests, and Ace config tests passed
+- urui's seven shared suites plus fixture-web through `bin/hoon-test.js`:
+  **73 arms**
 - every touched Hoon file parses through `bin/hoon-parse.js`
-- Python unittest: 10 passed
 - `verify-sync.sh --strict`: 24 files in sync
 - both repositories pass `git diff --check`
 
@@ -75,50 +72,42 @@ Nothing W4.3 itself asks for has been done yet: no spec has moved, and
 equivalent local check for `gviz-web.hoon` — compile once, sweep every
 needle, positive and negative — reports zero problems.
 
-Digests: graph-viz `page` `0857e3fb…` and `css` `4e55a264…` are
-**unchanged** through all four stages; only `javascript` moves. Current
-values are in `~/FoxyLabs/urui/baseline-digests.txt` and
-`fixture-digests.txt`, each with the note explaining what changed it.
+Stage 6 changes all three fixture assets; their accepted values are in
+`~/FoxyLabs/urui/fixture-digests.txt`. Graph-viz's Stage 5 values remain in
+`baseline-digests.txt`.
 
 ## Uncommitted files
 
 urui:
 
 ```text
-bin/hoon-parse.js
 bin/hoon-test.js
-desk/lib/urui-config.hoon
-desk/lib/urui-js.hoon
-desk/sur/urui.hoon
-desk/tests/lib/urui-config.hoon
-desk/tests/lib/urui-js.hoon
-desk/tests/lib/urui-shell.hoon
+docs/remaining-work-plan.md
 docs/session-handoff.md
 docs/w4.3-runtime-extraction.md
 tests/browser/doubles/dom.js
-tests/browser/scenarios/index.js
-tests/browser/scenarios/runtime.js
-tests/browser/scenarios/session.js
+tests/browser/doubles/index.js
+tests/browser/real/fixture-editors.spec.js
+tests/browser/scenarios/editor-adapter.js
 tests/browser/urui-core.test.js
+tests/fixture/app/urui-fixture.hoon
 tests/fixture/lib/urui-fixture-web.hoon
+tests/fixture/tests/app/urui-fixture.hoon
+tests/fixture/tests/lib/urui-fixture-web.hoon
 ```
 
 graph-viz:
 
 ```text
 .urui-sync.json
-desk/lib/gviz-web.hoon
-desk/lib/urui-config.hoon
-desk/lib/urui-js.hoon
-desk/sur/urui.hoon
-desk/tests/lib/gviz-web.hoon
 tests/browser/doubles/dom.js
+tests/browser/doubles/index.js
 ```
 
 Records in `~/FoxyLabs/urui`: `baseline-digests.txt`, `fixture-digests.txt`.
 
-The five shared files in graph-viz are synced copies — change them in urui
-and run `bin/sync.sh --dest /mnt/mars/gitrepos/graph-viz`.
+The shared files in graph-viz are synced copies — change them in urui and
+run `bin/sync.sh --dest /mnt/mars/gitrepos/graph-viz`.
 
 ## Staging the fixture desk
 
@@ -129,8 +118,10 @@ test, `desk.bill`, `desk.docket-0`), and the `%base` libraries and marks
 it borrows from `~/gitrepos/graph-viz/desk` (override with `--base` or
 `URUI_BASE_DESK`).
 
-It already exists and is committed on `~/piers/urui-zod`. To rebuild it
-after a source change:
+The old `~/piers/urui-zod` loom proved corrupt during Stage 6 verification.
+A fresh disposable fake ship at `/tmp/urui-stage6-zod` passed the full desk
+suite and was shut down cleanly. To rebuild a mounted desk after a source
+change:
 
 ```
 bin/stage-desk.sh --fixture --no-kelvin /tmp/urui-fixture

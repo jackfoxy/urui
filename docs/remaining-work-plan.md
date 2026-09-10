@@ -91,6 +91,8 @@ new runtime options and returned surfaces.
 
 ## Stage 6 — Fixture becomes a real consumer
 
+**Complete, 2026-09-10.**
+
 Files: `tests/fixture/lib/urui-fixture-web.hoon`.
 Change: mount both Ace editors (the fixture's `%text`/`%note` kinds), expose
 the editor test hooks (the fixture's equivalent of
@@ -104,6 +106,19 @@ Stage 7 will retarget; `-test /=urui-fixture=/tests ~` green with new
 editor-mount arms.
 Done: the fixture is a complete second consumer — no generic behavior
 remains provable only through graph-viz.
+
+Completed: the fixture mounts independent `%text` and `%note` Ace adapters,
+restores each tab's source and selection, exposes both editor test hooks, and
+shows `#editor-load-error` while hiding both hosts when adapter setup fails.
+Its Gall agent serves the complete Ace asset set used by the page.
+
+Verified: fixture Chromium **6 passed**, including both editors, tab restore,
+and adapter failure; fixture desk **80 arms, `ok=%.y`**, including three new
+editor-mount arms; urui's seven shared Hoon suites plus the fixture web suite
+**73 arms passed**; all 10 Node scenarios, core tests, and Ace config tests
+passed. All touched Hoon parses, strict sync reports 24 files in sync, and
+the graph-viz doubles smoke remains green. Fixture page, CSS, and JavaScript
+digests are re-recorded.
 
 ## Stage 7 — W4.3 proper: move the specs
 

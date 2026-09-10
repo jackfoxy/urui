@@ -1,9 +1,9 @@
 ::  %urui-fixture: the disposable consumer urui tests itself against.
 ::
 ::  Not a product.  This agent exists only inside a staged test desk: it
-::  binds the fixture's own base path, serves the three assets the shell
-::  produces, and answers `echo` — the stand-in for whatever real work a
-::  consumer does with the editor's contents.
+::  binds the fixture's own base path, serves the shell and Ace assets, and
+::  answers `echo` — the stand-in for whatever real work a consumer does
+::  with the editor's contents.
 ::
 ::  It lives outside urui/desk/ on purpose (plan decision 1): urui ships
 ::  no installable agent, so nothing here can be mistaken for one.
@@ -11,6 +11,15 @@
 /-  urui
 /+  default-agent, dbug, server
 /+  web=urui-fixture-web
+/+  uhttp=urui-http
+/*  ace-core    %js   /web/ace/ace/js
+/*  ace-light   %js   /web/ace/theme-github/js
+/*  ace-dark    %js   /web/ace/theme-monokai/js
+/*  ace-beaut   %js   /web/ace/ext-beautify/js
+/*  ace-prompt  %js   /web/ace/ext-prompt/js
+/*  ace-search  %js   /web/ace/ext-searchbox/js
+/*  ace-sets    %js   /web/ace/ext-settings-menu/js
+/*  ace-lic     %txt  /web/ace/license/txt
 |%
 +$  versioned-state  $%(state-0)
 +$  state-0  [%0 ~]
@@ -22,6 +31,29 @@
   %+  give-simple-payload:app:server  eyre-id
   ^-  simple-payload:http
   [[status ~[['content-type' content-type]]] `(as-octt:mimes:html (trip body))]
+::
+++  assets
+  ::  Ship routes mirror the offline browser server byte for byte.
+  ^-  (list [suffix=@t asset=asset:uhttp])
+  =/  js=@t  'text/javascript; charset=utf-8'
+  =/  text=@t  'text/plain; charset=utf-8'
+  %+  turn
+    :~  ['' 'text/html; charset=utf-8' page:web]
+        ['/' 'text/html; charset=utf-8' page:web]
+        ['/app.js' js javascript:web]
+        ['/app.css' 'text/css; charset=utf-8' css:web]
+        ['/ace/ace.js' js ace-core]
+        ['/ace/config.js' js ace-config-js:web]
+        ['/ace/theme-github.js' js ace-light]
+        ['/ace/theme-monokai.js' js ace-dark]
+        ['/ace/ext-beautify.js' js ace-beaut]
+        ['/ace/ext-prompt.js' js ace-prompt]
+        ['/ace/ext-searchbox.js' js ace-search]
+        ['/ace/ext-settings_menu.js' js ace-sets]
+        ['/ace/license.txt' text (of-wain:format ace-lic)]
+    ==
+  |=  [suffix=@t content-type=@t body=@t]
+  [suffix content-type (as-octs:mimes:html body)]
 --
 %-  agent:dbug
 =|  state-0
@@ -70,22 +102,14 @@
     ?.  authenticated.req
       :_  this
       (respond eyre-id 403 'text/plain; charset=utf-8' 'forbidden')
-    =/  root=?
-      ?|  =("/apps/urui-fixture" url)
-          =("/apps/urui-fixture/" url)
-      ==
-    ?:  ?&(=(%'GET' method) root)
+    ?:  =(method %'GET')
+      =/  asset  (asset-route:uhttp '/apps/urui-fixture' (crip url) assets)
+      ?~  asset
+        :_  this
+        (respond eyre-id 404 'text/plain; charset=utf-8' 'not found')
       :_  this
-      (respond eyre-id 200 'text/html; charset=utf-8' page:web)
-    ?:  ?&(=(%'GET' method) =("/apps/urui-fixture/app.js" url))
-      :_  this
-      (respond eyre-id 200 'text/javascript; charset=utf-8' javascript:web)
-    ?:  ?&(=(%'GET' method) =("/apps/urui-fixture/app.css" url))
-      :_  this
-      (respond eyre-id 200 'text/css; charset=utf-8' css:web)
-    ?:  ?&(=(%'GET' method) =("/apps/urui-fixture/ace/config.js" url))
-      :_  this
-      (respond eyre-id 200 'text/javascript; charset=utf-8' ace-config-js:web)
+      %+  give-simple-payload:app:server  eyre-id
+      (respond:uhttp 200 u.asset)
     ?:  ?&(=(%'POST' method) =("/apps/urui-fixture/echo" url))
       ::  the render stand-in: hand the posted bytes back as a document
       =/  posted=tape

@@ -14,8 +14,10 @@ module.exports = async (env) => {
     platform: 'win'
   });
 
-  assert.equal(api.editor.primary(), 'primary-editor');
-  assert.equal(api.editor.secondary(), 'secondary-editor');
+  assert.equal(api.editor.primary(), env.fixture.editor);
+  assert.equal(api.editor.secondary(), env.fixture.noteEditor);
+  assert.equal(env.window.__URUI_EDITOR_TEST__, env.fixture.editor);
+  assert.equal(env.window.__URUI_NOTE_EDITOR_TEST__, env.fixture.noteEditor);
   assert.equal(host['aria-label'], 'Fixture source');
   assert.equal(host['aria-describedby'], 'source-status');
   assert.equal(host['aria-invalid'], 'false');

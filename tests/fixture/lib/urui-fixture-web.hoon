@@ -131,8 +131,17 @@
       [reference-area editor-area result-area]
       help
       dialogs=~
-      styles=~
-      scripts=~['/apps/urui-fixture/app.js']
+      styles=~['/apps/urui-fixture/app.css']
+      :~  '/apps/urui-fixture/ace/ace.js'
+          '/apps/urui-fixture/ace/config.js'
+          '/apps/urui-fixture/ace/theme-github.js'
+          '/apps/urui-fixture/ace/theme-monokai.js'
+          '/apps/urui-fixture/ace/ext-beautify.js'
+          '/apps/urui-fixture/ace/ext-prompt.js'
+          '/apps/urui-fixture/ace/ext-searchbox.js'
+          '/apps/urui-fixture/ace/ext-settings_menu.js'
+          '/apps/urui-fixture/app.js'
+      ==
   ==
 ::
 ++  brand
@@ -153,6 +162,7 @@
         ==
         ;button#help(type "button", aria-expanded "false"): Help
         ;button#echo.primary(type "button"): Echo
+        ;div#editor-load-error.editor-load-error(hidden "", role "alert");
         ;label.toggle
           ;input#auto-echo(type "checkbox", checked "");
           ;span: Auto
@@ -184,7 +194,7 @@
       kind=`%text
       strip=&
       controls=~[;button#save-text(type "button"):"Save"]
-      body=~[;div#editor.editor-host(aria-label "Source");]
+      body=~[;div#editor.editor-host(aria-label "Text source editor");]
       secondary=~
   ==
 ::
@@ -256,10 +266,25 @@
     white-space: pre-wrap;
     font-family: monospace;
   }
+
+  #editor, #result-editor {
+    background: var(--surface);
+    border: 0;
+    flex: 1;
+    min-height: 12rem;
+    width: 100%;
+  }
+
+  #editor.ace_focus, #editor:focus-within,
+  #result-editor.ace_focus, #result-editor:focus-within {
+    box-shadow: inset 0 0 0 2px var(--accent);
+    outline: 3px solid var(--focus);
+    outline-offset: -3px;
+  }
   '''
 ::
 ++  app-js
-  ::  The fixture's own script: the hooks a real consumer supplies.
+  ::  Mount both editors and bind fixture policy to the shared runtime.
   ^-  @t
   '''
   const fixtureCalls = [];
@@ -276,6 +301,8 @@
     source: 'fixture source',
     view: {scale: 1}
   };
+  let editor;
+  let noteEditor;
   const runtime = window.urui.runtime({
     elements: {
       explorerPane: document.querySelector('#explorer'),
@@ -284,14 +311,18 @@
       editorStatus: document.querySelector('#source-status'),
       resultStatus: document.querySelector('#result-status')
     },
-    editors: () => fixture.editors || [],
+    editors: () => [editor, noteEditor],
     onChange: fixtureHook('runtime', 'change', undefined),
     onResize: fixtureHook('runtime', 'resize', undefined),
     onHelpOpen: fixtureHook('runtime', 'helpOpen', undefined),
     onTabsRendered: fixtureHook('runtime', 'tabsRendered', undefined),
     session: {
       read: (key) => {
-        if (key === 'source') return fixture.source;
+        if (key === 'source') {
+          return window.__URUI_DOUBLES_TEST__
+            ? fixture.source
+            : editor?.getSource() ?? fixture.source;
+        }
         if (key === 'view') return fixture.view;
         return undefined;
       },
@@ -313,20 +344,130 @@
           selection: options.selection || {start: 0, end: 0}
         }),
         empty: () => runtime.tabs.create('text', ''),
-        onCapture: fixtureHook('tabs', 'capture', undefined),
-        onActivate: fixtureHook('tabs', 'activate', undefined),
+        onCapture: (tab) => {
+          if (!window.__URUI_DOUBLES_TEST__) {
+            tab.source = editor?.getSource() ?? tab.source;
+            tab.selection = editor?.getSelection() ?? tab.selection;
+          }
+          fixtureCalls.push({group: 'tabs', method: 'capture', args: [tab]});
+        },
+        onActivate: (tab, choices) => {
+          if (!window.__URUI_DOUBLES_TEST__) {
+            editor?.setSource(tab.source, {
+              history: 'reset', notify: false, selection: tab.selection
+            });
+          }
+          fixtureCalls.push({
+            group: 'tabs', method: 'activate', args: [tab, choices]
+          });
+        },
         afterActivate: fixtureHook('tabs', 'afterActivate', undefined),
         onClose: fixtureHook('tabs', 'closed', undefined)
       },
       note: {
         defaults: (options, source) => ({editBaseSource: source}),
         empty: () => runtime.tabs.create('note', ''),
-        onActivate: fixtureHook('tabs', 'activate', undefined)
+        onCapture: (tab) => {
+          if (!window.__URUI_DOUBLES_TEST__) {
+            tab.source = noteEditor?.getSource() ?? tab.source;
+          }
+        },
+        onActivate: (tab) => {
+          if (!window.__URUI_DOUBLES_TEST__) {
+            noteEditor?.setSource(
+              tab.source, {history: 'reset', notify: false}
+            );
+          }
+          const result = document.querySelector('#fixture-result');
+          if (result) result.textContent = tab.source;
+        }
       }
     }
   });
+  try {
+    const assets = window.uruiFixtureAceAssets;
+    editor = window.urui.editor.adapter(document.querySelector('#editor'), {
+      assets,
+      label: 'Text source editor',
+      describedBy: 'editor-load-error',
+      platform: window.__URUI_BROWSER_TEST__?.acePlatform
+    });
+    noteEditor = window.urui.editor.adapter(
+      document.querySelector('#result-editor'),
+      {
+        assets,
+        label: 'Note source editor',
+        describedBy: 'editor-load-error',
+        platform: window.__URUI_BROWSER_TEST__?.acePlatform
+      }
+    );
+  } catch (cause) {
+    const primaryHost = document.querySelector('#editor');
+    const noteHost = document.querySelector('#result-editor');
+    if (primaryHost) primaryHost.hidden = true;
+    if (noteHost) noteHost.hidden = true;
+    const failure = document.querySelector('#editor-load-error');
+    if (failure) {
+      failure.hidden = false;
+      failure.title = String(cause);
+      failure.textContent = 'Source editors unavailable. Reload after '
+        + 'checking the Ace assets.';
+    }
+  }
+  fixture.editors = [editor, noteEditor];
+  fixture.editor = editor;
+  fixture.noteEditor = noteEditor;
+  window.__URUI_EDITOR_TEST__ = editor;
+  window.__URUI_NOTE_EDITOR_TEST__ = noteEditor;
   fixture.runtime = runtime;
   runtime.wire();
+  if (!window.__URUI_DOUBLES_TEST__) {
+    const saved = runtime.session.load();
+    if (!runtime.tabs.list('text').length) {
+      runtime.tabs.create('text', saved?.source ?? fixture.source);
+    }
+    if (!runtime.tabs.list('note').length) runtime.tabs.create('note', '');
+    runtime.tabs.select(
+      'text', runtime.tabs.activeId('text') || runtime.tabs.list('text')[0].id,
+      {capture: false}
+    );
+    runtime.tabs.select(
+      'note', runtime.tabs.activeId('note') || runtime.tabs.list('note')[0].id,
+      {capture: false}
+    );
+    editor?.onChange(() => {
+      runtime.tabs.capture('text');
+      runtime.tabs.render('text');
+      runtime.session.queue();
+    });
+    noteEditor?.onChange(() => {
+      runtime.tabs.capture('note');
+      runtime.tabs.render('note');
+      const result = document.querySelector('#fixture-result');
+      if (result) result.textContent = noteEditor.getSource();
+      runtime.session.queue();
+    });
+  }
+  runtime.shortcuts.register('echo', async () => {
+    const source = editor?.getSource() ?? '';
+    const response = await fetch('/apps/urui-fixture/echo', {
+      method: 'POST', body: source
+    });
+    if (!response.ok) throw new Error(await response.text());
+    const note = runtime.tabs.active('note');
+    note.source = await response.text();
+    runtime.tabs.select('note', note.id, {capture: false});
+  });
+  runtime.shortcuts.register('save', () => runtime.files.save('text'));
+  runtime.shortcuts.register('save-as', () => runtime.files.save('note'));
+  runtime.shortcuts.register('reset-view', () => { fixture.view.scale = 1; });
+  runtime.shortcuts.register('fit-view', () => { fixture.view.scale = 2; });
+  document.querySelector('#echo')?.addEventListener('click', () => {
+    runtime.shortcuts.dispatch({
+      key: 'Enter', ctrlKey: true,
+      preventDefault: () => {}, stopPropagation: () => {}
+    });
+  });
   window.uruiFixture = fixture;
   window.urui.boot({
     onReady(api) {
@@ -343,8 +484,8 @@
       active: fixtureHook('tabs', 'active', 'active')
     },
     editor: {
-      primary: fixtureHook('editor', 'primary', 'primary-editor'),
-      secondary: fixtureHook('editor', 'secondary', 'secondary-editor')
+      primary: () => editor,
+      secondary: () => noteEditor
     },
     explorer: {
       show: fixtureHook('explorer', 'show', 'shown'),
