@@ -121,25 +121,58 @@
   =/  full-editor=area:urui
     %*  .  editor-area
       strip  &
+      body
+        :~  ;p#editor-load-error(hidden "", role "alert");
+            ;div#probe-source.source;
+        ==
     ==
   =/  full-result=area:urui
     %*  .  result-area
       kind  `%note
     ==
+  =/  fixture-toolbar=marl
+    :~  ;nav.toolbar(aria-label "Fixture controls")
+          ;label.theme-control
+            ;span: Theme
+            ;select#theme(aria-label "Theme")
+              ;option(value "system"): System
+              ;option(value "light"): Light
+              ;option(value "dark"): Dark
+            ==
+          ==
+          ;button#help(type "button", aria-expanded "false"): Help
+        ==
+    ==
+  =/  fixture-help=marl
+    :~  ;div#fallback-help-content
+          ;p: Consumer-neutral fallback help.
+        ==
+        ;div#docs-help-content.docs-help-content(hidden "")
+          ;nav#docs-help-nav.docs-help-nav
+            =aria-label  "Fixture documentation"
+            =aria-busy   "true"
+            ;p.docs-help-loading: Loading documentation…
+          ==
+        ==
+    ==
   :*  full-config
       brand=~[;h1.brand:"Probe"]
-      toolbar=~[;nav.toolbar(aria-label "Probe controls");]
+      fixture-toolbar
       :*  reference-area
           full-editor
           full-result
       ==
-      help=~[;p.probe-help:"nothing to see"]
+      fixture-help
       dialogs=~[;div#probe-dialog.dialog;]
       styles=~['body { color: black; }']
       scripts=~['/probe/app.js']
   ==
 ::
 ++  full-doc  (build:shell full-spec)
+::
+++  fixture-spec  full-spec
+::
+++  fixture-doc  (build:shell fixture-spec)
 ::
 ++  elements
   ::  Every element with this tag, depth first.
@@ -176,6 +209,23 @@
   ^-  ?
   ?=(^ (skim nodes |=(kid=manx =(id (attribute kid %id)))))
 ::
+++  node-by-id
+  ::  The first element with this id, depth first.
+  |=  [top=manx id=tape]
+  ^-  (unit manx)
+  ?:  =(id (attribute top %id))  `top
+  =/  children=(list manx)  c.top
+  |-
+  ?~  children  ~
+  =/  found=(unit manx)  ^$(top i.children)
+  ?^  found  found
+  $(children t.children)
+::
+++  has-node-id
+  |=  [top=manx id=tape]
+  ^-  ?
+  ?=(^ (node-by-id top id))
+::
 ++  panes
   ::  The three area sections, in document order.
   ^-  (list manx)
@@ -198,6 +248,60 @@
   ?.  =(%$ n.g.kid)  ""
   =/  found  (skim a.g.kid |=([n=mane v=tape] =(%$ n)))
   ?~(found "" v.i.found)
+::
+++  test-shell-page
+  ::  Shared page contract, exercised through the fixture-shaped spec.
+  =/  ids=(list tape)
+    :~  "probe-reference"
+        "explorer-tabs"
+        "explorer-collapse"
+        "text-files-tab"
+        "note-files-tab"
+        "text-files-tree"
+        "note-files-tree"
+        "explorer-resizer"
+        "workspace"
+        "splitter"
+        "probe-editor"
+        "probe-result"
+        "text-document-tabs"
+        "note-document-tabs"
+        "probe-secondary"
+        "editor-load-error"
+        "theme"
+        "help"
+        "help-panel"
+        "fallback-help-content"
+        "docs-help-content"
+        "docs-help-nav"
+        "file-context-menu"
+        "file-context-open"
+        "file-context-delete"
+        "clay-error-modal"
+        "clay-error-message"
+        "probe-status"
+        "probe-save"
+    ==
+  =/  dialogs=(list manx)
+    %+  skim  (elements fixture-doc %aside)
+    |=(kid=manx =("dialog" (attribute kid %role)))
+  =/  options  (elements fixture-doc %option)
+  =/  id-tests=tang
+    %-  zing
+    %+  turn  ids
+    |=  id=tape
+    (expect !>((has-node-id fixture-doc id)))
+  ;:  weld
+    id-tests
+    (expect-eq !>(2) !>((lent dialogs)))
+    (expect-eq !>("true") !>((attribute (snag 0 dialogs) %aria-modal)))
+    (expect-eq !>("true") !>((attribute (snag 1 dialogs) %aria-modal)))
+    (expect-eq !>(3) !>((lent options)))
+    (expect-eq !>("system") !>((attribute (snag 0 options) %value)))
+    (expect-eq !>("light") !>((attribute (snag 1 options) %value)))
+    (expect-eq !>("dark") !>((attribute (snag 2 options) %value)))
+    (expect-eq !>(0) !>((lent (elements fixture-doc %iframe))))
+  ==
 ::
 ++  test-shell-emits-three-panes-in-document-order
   =/  found  panes

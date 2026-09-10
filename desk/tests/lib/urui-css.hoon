@@ -27,9 +27,8 @@
         [%shell '.workbench {']
         [%explorer '.explorer-file-tree {']
         [%tabs '.document-tab-control {']
-        [%dialogs '.docs-help-group[open]']
+        [%dialogs '.help-panel {']
         [%controls '.icon-button {']
-        [%responsive '@media (max-width: 760px)']
     ==
   %-  zing
   %+  turn  cases
@@ -59,6 +58,43 @@
   %+  turn  needles
   |=  needle=@t
   (expect !>(?=(^ (find (trip needle) style))))
+::
+++  test-theme-rules-avoid-fixed-backgrounds
+  =/  style  (trip (compose:ucss ~[%tokens %shell %explorer %tabs]))
+  =/  forbidden=(list tape)
+    :~  "  background: #ffffff"
+        "  background: #fafafa"
+        "  background: #f4f4f5"
+    ==
+  %-  zing
+  %+  turn  forbidden
+  |=  needle=tape
+  (expect !>(?=(~ (find needle style))))
+::
+++  test-docs-help
+  =/  style  (trip (compose:ucss ~[%explorer %dialogs]))
+  =/  needles=(list tape)
+    :~  ".docs-help-content"
+        ".docs-help-group[open]"
+        ".docs-explorer-frame"
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=tape
+  (expect !>(?=(^ (find needle style))))
+::
+++  test-responsive-shell
+  =/  style  (trip (compose:ucss ~[%shell %tabs %responsive]))
+  =/  needles=(list tape)
+    :~  "@media (max-width: 760px)"
+        "explorer-collapsed"
+        "scrollbar-width: thin"
+        "::-webkit-scrollbar-thumb"
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=tape
+  (expect !>(?=(^ (find needle style))))
 ::
 ++  test-shared-sections-exclude-app-rules
   =/  style

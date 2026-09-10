@@ -1,10 +1,54 @@
 ::  Tests for /lib/urui-js.
 ::
-/+  *test, ujs=urui-js
+/-  urui
+/+  *test, ucfg=urui-config, ujs=urui-js
 |%
 ::
+++  fixture-config
+  ::  Consumer-neutral values used by %urui-fixture.
+  ^-  app-config:urui
+  %*  .  *app-config:urui
+    name.app-id             %urui-fixture
+    title.app-id            'urui fixture'
+    base.app-id             '/apps/urui-fixture'
+    storage-key.app-id      'urui-fixture.session.v1'
+    storage-version.app-id  1
+    render-debounce.limits  350
+    save-debounce.limits    150
+    min-explorer.limits     180
+    divider.limits          10
+    pane-min.limits         25
+    pane-max.limits         70
+    narrow.limits           760
+    max-source.limits       262.144
+    slots
+      :~  ['paneWidth' %urui %scalar ~]
+          ['explorerWidth' %urui %scalar ~]
+          ['explorerOpen' %urui %scalar ~]
+          ['explorerView' %urui %scalar ~]
+          ['explorerOrder' %urui %scalar ~]
+          ['docsTabs' %urui %tabs ~]
+          ['nextDocs' %urui %next ~]
+          ['refTabs' %urui %tabs ~]
+          ['nextRef' %urui %next ~]
+      ==
+    docs-root  `'/docs/d/urui-fixture/'
+    share-param
+      `[name='source' max=12.288 param-max=16.384]
+  ==
+::
+++  config-source
+  (trip (emit:ucfg fixture-config))
+::
+++  core-source
+  (trip core:ujs)
+::
+++  has
+  |=  [needle=tape source=tape]
+  ^-  ?
+  ?=(^ (find needle source))
+::
 ++  test-public-api
-  =/  source  (trip core:ujs)
   =/  needles=(list @t)
     :~  'window.urui = Object.freeze(api)'
         'boot(next = {})'
@@ -21,34 +65,139 @@
   %-  zing
   %+  turn  needles
   |=  needle=@t
-  (expect !>(?=(^ (find (trip needle) source))))
+  (expect !>((has (trip needle) core-source)))
 ::
 ++  test-boot-contract
-  =/  source  (trip core:ujs)
   ;:  weld
-    (expect !>(?=(^ (find "let booted = false" source))))
-    (expect !>(?=(^ (find "urui.boot called more than once" source))))
-    (expect !>(?=(^ (find "invoke(null, 'onReady', [api])" source))))
-    (expect !>(?=(^ (find "return target(...args)" source))))
+    (expect !>((has "let booted = false" core-source)))
+    (expect !>((has "urui.boot called more than once" core-source)))
+    (expect !>((has "invoke(null, 'onReady', [api])" core-source)))
+    (expect !>((has "return target(...args)" core-source)))
   ==
 ::
-++  test-editor-adapter
-  =/  source  (trip editor-adapter:ujs)
+++  test-theme-switcher
+  =/  source  (trip (theme-bootstrap:ujs 'urui-fixture.session.v1' 1))
+  =/  needles=(list tape)
+    :~  "'system', 'light', 'dark'"
+        "preferences?.theme"
+        "dataset.effectiveTheme"
+        "prefers-color-scheme: dark"
+        "localStorage.getItem(key)"
+        "saved?.version ==="
+        "themes.includes(candidate)"
+        "matchMedia("
+        "root.style.colorScheme"
+        "urui-fixture.session.v1"
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=tape
+  (expect !>((has needle source)))
+::
+++  test-docs-help-contract
+  =/  config-needles=(list tape)
+    :~  "\"docsRoot\":\"/docs/d/urui-fixture/\""
+        "\"permanentViews\""
+    ==
+  =/  api-needles=(list tape)
+    :~  "'show', 'refreshTree', 'addRef', 'openDocs'"
+        "help: (...args)"
+    ==
+  =/  config-tests=tang
+    %-  zing
+    %+  turn  config-needles
+    |=  needle=tape
+    (expect !>((has needle config-source)))
+  =/  api-tests=tang
+    %-  zing
+    %+  turn  api-needles
+    |=  needle=tape
+    (expect !>((has needle core-source)))
+  (weld config-tests api-tests)
+::
+++  test-responsive-layout-contract
+  =/  needles=(list tape)
+    :~  "\"minExplorer\":180"
+        "\"divider\":10"
+        "\"paneMin\":25"
+        "\"paneMax\":70"
+        "\"narrow\":760"
+    ==
+  =/  tests=tang
+    %-  zing
+    %+  turn  needles
+    |=  needle=tape
+    (expect !>((has needle config-source)))
   ;:  weld
-    (expect !>(?=(^ (find "const assets = options.assets" source))))
-    (expect !>(?=(^ (find "session.setMode(options.mode" source))))
-    (expect !>(?=(^ (find "setDiagnostic" source))))
-    (expect !>(?=(^ (find "onChange(listener)" source))))
+    tests
+    (expect !>((has "'paneWidth', 'explorerWidth'" core-source)))
+  ==
+::
+++  test-editor-usability
+  =/  source  (trip editor-adapter:ujs)
+  =/  needles=(list tape)
+    :~  "const assets = options.assets"
+        "window.ace.edit(host)"
+        "session.setMode(options.mode"
+        "session.setUseWorker(assets.useWorker)"
+        "showPrintMargin: false"
+        "tabSize: 2"
+        "useSoftTabs: true"
+        "wrap: true"
+        "addCommands(beautify.commands)"
+        "bindKey('Ctrl-T', 'transposeletters')"
+        "setDiagnostic"
+        "onChange(listener)"
+        "aria-label"
+        "aria-labelledby"
+        "aria-describedby"
+        "aria-invalid"
+    ==
+  =/  tests=tang
+    %-  zing
+    %+  turn  needles
+    |=  needle=tape
+    (expect !>((has needle source)))
+  ;:  weld
+    tests
     (expect !>(?=(~ (find "graphViz" source))))
     (expect !>(?=(~ (find "GVIZ" source))))
     (expect !>(?=(~ (find "DOT" source))))
   ==
 ::
-++  test-theme-bootstrap
-  =/  source  (trip (theme-bootstrap:ujs 'probe-key' 7))
-  ;:  weld
-    (expect !>(?=(^ (find "probe-key" source))))
-    (expect !>(?=(^ (find "===7" source))))
-    (expect !>(?=(^ (find "root.dataset.effectiveTheme" source))))
-  ==
+++  test-persistence-and-url-import-contract
+  =/  config-needles=(list tape)
+    :~  "\"storageKey\":\"urui-fixture.session.v1\""
+        "\"storageVersion\":1"
+        "\"key\":\"paneWidth\""
+        "\"key\":\"explorerWidth\""
+        "\"key\":\"explorerOpen\""
+        "\"key\":\"explorerView\""
+        "\"key\":\"explorerOrder\""
+        "\"key\":\"docsTabs\""
+        "\"key\":\"nextDocs\""
+        "\"key\":\"refTabs\""
+        "\"key\":\"nextRef\""
+        "\"owner\":\"urui\""
+        "\"shape\":\"tabs\""
+        "\"shareParam\""
+        "\"name\":\"source\""
+        "\"max\":12288"
+        "\"paramMax\":16384"
+    ==
+  =/  api-needles=(list tape)
+    :~  "session: methods('session', ['save', 'queue', 'get', 'set'])"
+        "files: methods('files', ['browse', 'load', 'save', 'delete'])"
+    ==
+  =/  config-tests=tang
+    %-  zing
+    %+  turn  config-needles
+    |=  needle=tape
+    (expect !>((has needle config-source)))
+  =/  api-tests=tang
+    %-  zing
+    %+  turn  api-needles
+    |=  needle=tape
+    (expect !>((has needle core-source)))
+  (weld config-tests api-tests)
 --
