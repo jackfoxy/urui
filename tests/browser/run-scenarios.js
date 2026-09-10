@@ -14,8 +14,6 @@ const scenarios = require('./scenarios/index.js');
 const application = process.argv[2];
 if (!application) throw new Error('usage: node run-scenarios.js APP_JS');
 
-//  run-scenario.js arrives with the doubles in W4.2; with an empty
-//  inventory nothing forks, so the path is unused until then
 const runner = path.join(__dirname, 'run-scenario.js');
 
 let target = path.resolve(application);

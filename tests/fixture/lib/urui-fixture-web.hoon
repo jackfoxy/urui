@@ -248,9 +248,69 @@
   ::  The fixture's own script: the hooks a real consumer supplies.
   ^-  @t
   '''
+  const fixtureCalls = [];
+
+  function fixtureHook(group, method, result) {
+    return (...args) => {
+      fixtureCalls.push({group, method, args});
+      return result;
+    };
+  }
+
+  const fixture = {calls: fixtureCalls};
+  window.uruiFixture = fixture;
   window.urui.boot({
     onReady(api) {
-      window.uruiFixture = {ready: true, api};
+      fixture.ready = true;
+      fixture.api = api;
+    },
+    status: fixtureHook('shell', 'status', 'status'),
+    tabs: {
+      create: fixtureHook('tabs', 'create', 'created'),
+      close: fixtureHook('tabs', 'close', 'closed'),
+      select: fixtureHook('tabs', 'select', 'selected'),
+      update: fixtureHook('tabs', 'update', 'updated'),
+      list: fixtureHook('tabs', 'list', 'listed'),
+      active: fixtureHook('tabs', 'active', 'active')
+    },
+    editor: {
+      primary: fixtureHook('editor', 'primary', 'primary-editor'),
+      secondary: fixtureHook('editor', 'secondary', 'secondary-editor')
+    },
+    explorer: {
+      show: fixtureHook('explorer', 'show', 'shown'),
+      refreshTree: fixtureHook('explorer', 'refreshTree', 'refreshed'),
+      addRef: fixtureHook('explorer', 'addRef', 'added'),
+      openDocs: fixtureHook('explorer', 'openDocs', 'opened')
+    },
+    dialog: {
+      help: fixtureHook('dialog', 'help', 'helped'),
+      error: fixtureHook('dialog', 'error', 'errored'),
+      confirm: fixtureHook('dialog', 'confirm', true),
+      prompt: fixtureHook('dialog', 'prompt', 'fixture-name')
+    },
+    session: {
+      save: fixtureHook('session', 'save', 'saved'),
+      queue: fixtureHook('session', 'queue', 'queued'),
+      get: fixtureHook('session', 'get', 'loaded'),
+      set: fixtureHook('session', 'set', 'stored')
+    },
+    files: {
+      browse: fixtureHook('files', 'browse', 'browsed'),
+      load: fixtureHook('files', 'load', 'loaded'),
+      save: fixtureHook('files', 'save', 'saved'),
+      delete: fixtureHook('files', 'delete', 'deleted')
+    },
+    shortcuts: {
+      register: fixtureHook('shortcuts', 'register', 'registered')
+    },
+    layout: {
+      paneWidth: fixtureHook('layout', 'paneWidth', 55),
+      explorerWidth: fixtureHook('layout', 'explorerWidth', 320)
+    },
+    problem: {
+      show: fixtureHook('problem', 'show', 'shown'),
+      clear: fixtureHook('problem', 'clear', 'cleared')
     }
   });
   '''

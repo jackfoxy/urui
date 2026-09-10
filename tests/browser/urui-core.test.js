@@ -7,15 +7,29 @@ const vm = require('node:vm');
 
 const application = process.env.URUI_APP_JS;
 if (!application) throw new Error('set URUI_APP_JS to the assembled bundle');
+const applicationSource = fs.readFileSync(application, 'utf8');
 
-function boot() {
+function evaluate(source) {
   const window = {
     confirm: () => true,
     prompt: () => null
   };
   window.window = window;
-  vm.runInNewContext(fs.readFileSync(application, 'utf8'), {window});
+  vm.runInNewContext(source, {window});
   return window;
+}
+
+function boot() {
+  return evaluate(applicationSource);
+}
+
+function bootWithoutHooks() {
+  const marker = 'const fixtureCalls = [];';
+  const appStart = applicationSource.indexOf(marker);
+  assert.notEqual(appStart, -1);
+  return evaluate(
+    `${applicationSource.slice(0, appStart)}window.urui.boot({});`
+  );
 }
 
 test('publishes and boots the stable API', () => {
@@ -49,8 +63,25 @@ test('publishes and boots the stable API', () => {
   assert.throws(() => urui.boot({}), /called more than once/);
 });
 
+test('fixture hooks are forwarded through the public API', () => {
+  const {urui, uruiFixture} = boot();
+  assert.equal(urui.status('source', 'Ready'), 'status');
+  assert.equal(urui.tabs.active('text'), 'active');
+  assert.equal(urui.dialog.confirm('continue?'), true);
+  assert.equal(urui.dialog.prompt('name?'), 'fixture-name');
+  assert.deepEqual(
+    Array.from(uruiFixture.calls, ({group, method}) => [group, method]),
+    [
+      ['shell', 'status'],
+      ['tabs', 'active'],
+      ['dialog', 'confirm'],
+      ['dialog', 'prompt']
+    ]
+  );
+});
+
 test('missing hooks are safe and dialogs use browser fallbacks', () => {
-  const {urui} = boot();
+  const {urui} = bootWithoutHooks();
   assert.equal(urui.status('source', 'Ready'), undefined);
   assert.equal(urui.tabs.active('text'), undefined);
   assert.equal(urui.dialog.confirm('continue?'), true);

@@ -145,6 +145,11 @@ context menu, and dialogs. Consumers now define their brand, controls,
 content, and extra dialogs as marl slots and build the page with
 `(build:shell spec)`. See [the Graph-reviewed page diff](docs/w3.6-page-diff.md).
 
+W4.2 moves the nine consumer-neutral Node scenarios and their browser doubles
+to urui. The fixture supplies traceable hooks for every public API group;
+Graph-viz keeps four application scenarios and consumes checksum-tracked
+copies of the shared doubles.
+
 ## License
 
 MIT+n — see [LICENSE](LICENSE).

@@ -1,12 +1,11 @@
 'use strict';
 
-// Scenario inventory for the urui doubles suite.
-//
-// Empty until W4.2 moves the generic scenarios here from graph-viz; the
-// runner is wired now so the move is a file copy and one line in this list,
-// not a new harness.
+// Consumer-neutral scenarios owned by urui.
 
-const shell = [];
+const shell = [
+  'shell', 'tabs', 'explorer', 'docs', 'dialogs', 'files', 'session',
+  'shortcuts', 'editor-adapter'
+];
 const app = [];
 
 module.exports = {shell, app, all: [...shell, ...app]};

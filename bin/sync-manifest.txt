@@ -15,3 +15,10 @@ desk/web/ace/ext-searchbox.js
 desk/web/ace/ext-settings-menu.js
 desk/web/ace/license.txt
 desk/web/ace/README.md
+tests/browser/doubles/README.md
+tests/browser/doubles/ace.js
+tests/browser/doubles/dom.js
+tests/browser/doubles/fetch.js
+tests/browser/doubles/index.js
+tests/browser/doubles/media.js
+tests/browser/doubles/storage.js
