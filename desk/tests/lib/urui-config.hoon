@@ -16,6 +16,7 @@
               label='Text'
               untitled='Untitled'
               ext=%txt
+              leaf=%txt
               mime='text/plain'
               tabs=&
               refs=|
@@ -81,6 +82,7 @@
   ;:  weld
     (expect !>((has (trip '\22kinds\22:[{'))))
     (expect !>((has "\"ext\":\"txt\"")))
+    (expect !>((has "\"leaf\":\"txt\"")))
     (expect !>((has "\"tabs\":true")))
     (expect !>((has "\"refs\":false")))
   ==

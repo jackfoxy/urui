@@ -200,4 +200,193 @@
     |=  needle=tape
     (expect !>((has needle core-source)))
   (weld config-tests api-tests)
+::
+++  test-shell-runtime-contract
+  ::  The runtime owns the frame urui emits, and names no consumer.
+  =/  source  (trip runtime:ujs)
+  =/  needles=(list tape)
+    :~  "const config = window.URUI_CONFIG"
+        "config.limits ||"
+        "limits.paneMin ?? 25"
+        "limits.paneMax ?? 70"
+        "limits.minExplorer ?? 180"
+        "limits.divider ?? 10"
+        "limits.narrow ?? 760"
+        "role('reference')"
+        "#explorer-resizer"
+        "#explorer-collapse"
+        "#help-panel"
+        "#close-help"
+        "#clay-error-modal"
+        "#clay-error-message"
+        "#close-clay-error"
+        "#splitter"
+        "#workbench"
+        "#workspace"
+        "requestAnimationFrame"
+        "themes.includes(candidate)"
+        "root.dataset.effectiveTheme = effective"
+        "root.style.colorScheme = effective"
+        "prefers-color-scheme: dark"
+        "--editor-width"
+        "--explorer-width"
+        "explorer-collapsed"
+        "Collapse explorer"
+        "Expand explorer"
+        "aria-expanded"
+        "errorReturnFocus"
+        "function wire()"
+        "if (options.onChange) options.onChange()"
+        "else queueSaveSession()"
+        "options.editors"
+    ==
+  =/  tests=tang
+    %-  zing
+    %+  turn  needles
+    |=  needle=tape
+    (expect !>((has needle source)))
+  ;:  weld
+    tests
+    (expect !>((has "runtime: createRuntime" core-source)))
+    (expect !>((has "function createRuntime(options =" core-source)))
+    (expect !>(?=(~ (find "graphViz" source))))
+    (expect !>(?=(~ (find "GVIZ" source))))
+    (expect !>(?=(~ (find "DOT" source))))
+    (expect !>(?=(~ (find "preview" source))))
+  ==
+::
+++  test-document-tab-contract
+  ::  Tabs are parameterized over `config.kinds`; the strip markup and
+  ::  the clay-leaf label rule belong to urui, not to a consumer.
+  =/  source  (trip runtime:ujs)
+  =/  needles=(list tape)
+    :~  "const kinds = config.kinds"
+        "unknown document kind:"
+        "kind?.untitled"
+        "leaf === kind.leaf"
+        "document-tab-control"
+        "document-tab-add-control"
+        "data-document-tab"
+        "aria-selected"
+        "Unsaved changes; close tab"
+        "Discard unsaved changes in"
+        "effectAllowed = 'copyMove'"
+        "dropEffect = 'move'"
+        "is-dragging"
+        "options.onTabsRendered"
+        "syncExplorerTabOrder()"
+        "tabHooks(name).onActivate"
+        "tabHooks(name).afterActivate"
+        "tabHooks(name).onCapture"
+        "tabHooks(name).onClose"
+    ==
+  =/  tests=tang
+    %-  zing
+    %+  turn  needles
+    |=  needle=tape
+    (expect !>((has needle source)))
+  ;:  weld
+    tests
+    (expect !>(?=(~ (find "dotTabs" source))))
+    (expect !>(?=(~ (find "svgTabs" source))))
+  ==
+::
+++  test-explorer-contract
+  ::  One strip holds the permanent file trees, documentation tabs and
+  ::  reference tabs; the tree, its context menu, and the `doc.toc`
+  ::  format are urui's, and none of it names a consumer.
+  =/  source  (trip runtime:ujs)
+  =/  needles=(list tape)
+    :~  "config.permanentViews"
+        "config.docsRoot"
+        "config.appId?.title"
+        "data-explorer-view"
+        "explorerTabId"
+        "docs-tab-control"
+        "ref-tab-control"
+        "docs-explorer-panel"
+        "ref-explorer-panel"
+        "docs-explorer-frame"
+        "ref-source"
+        "aria-labelledby"
+        "reference'"
+        "explorer-file-row"
+        "file-tree-file"
+        "file-tree-actions"
+        "file-tree-directory"
+        "file-tree-list"
+        "Invalid Clay file list"
+        "Enter a relative Clay path"
+        "Clay path contains unsupported characters"
+        "Unable to load files:"
+        "aria-haspopup"
+        "docs-help-group"
+        "docs-help-summary"
+        "docs-help-subnav"
+        "docs-help-link"
+        "doc.toc"
+        "text/plain"
+        "options.browse(name)"
+        "options.openFile"
+        "kindByName.get(name)?.leaf"
+    ==
+  =/  tests=tang
+    %-  zing
+    %+  turn  needles
+    |=  needle=tape
+    (expect !>((has needle source)))
+  ;:  weld
+    tests
+    (expect !>(?=(~ (find "graph viz" source))))
+    (expect !>(?=(~ (find "dot-files" source))))
+    (expect !>(?=(~ (find "svg-files" source))))
+    (expect !>(?=(~ (find "graph-viz" source))))
+  ==
+::
+++  test-session-contract
+  ::  The record is described slot by slot by `config.slots`, each slot
+  ::  naming the json key already on disk, so no migration is written.
+  =/  source  (trip runtime:ujs)
+  =/  needles=(list tape)
+    :~  "config.appId?.storageKey"
+        "config.appId?.storageVersion"
+        "config.slots"
+        "config.shareParam"
+        "saved.version !== storageVersion"
+        "localStorage.setItem(storageKey"
+        "localStorage.getItem(storageKey)"
+        "readEnvelope"
+        "writeEnvelope"
+        "key.split('.')"
+        "slot.owner === 'app'"
+        "options.session?.read?.(slot.key)"
+        "options.session?.validate?.(slot.key, raw)"
+        "tabHooks(name).validate"
+        "highestId"
+        "Number.isSafeInteger(value)"
+        "limits.saveDebounce ?? 150"
+        "beforeunload"
+        "Source must be text"
+        "Source contains a null byte"
+        "-byte limit"
+        "TextEncoder"
+        "TextDecoder"
+        "is not canonical"
+        "searchParams.get(share.name)"
+        "applySession(record)"
+    ==
+  =/  tests=tang
+    %-  zing
+    %+  turn  needles
+    |=  needle=tape
+    (expect !>((has needle source)))
+  ;:  weld
+    tests
+    ::  the slot keys are data, never spelled out in the runtime
+    (expect !>(?=(~ (find "dotTabs" source))))
+    (expect !>(?=(~ (find "activeDotTabId" source))))
+    (expect !>(?=(~ (find "autoRender" source))))
+    (expect !>(?=(~ (find "graph-viz.session" source))))
+    (expect !>(?=(~ (find "DOT" source))))
+  ==
 --

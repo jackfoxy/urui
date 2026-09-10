@@ -99,6 +99,7 @@
               label='Text'
               untitled='Untitled'
               ext=%txt
+              leaf=%txt
               mime='text/plain'
               tabs=&
               refs=&
@@ -107,6 +108,7 @@
               label='Note'
               untitled='Preview'
               ext=%md
+              leaf=%md
               mime='text/markdown'
               tabs=&
               refs=&

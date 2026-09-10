@@ -10,10 +10,14 @@ module.exports = async (env) => {
 
   assert.equal(appId.storageKey, 'urui-fixture.session.v1');
   assert.equal(appId.storageVersion, 1);
-  assert.equal(slots.length, 17);
+  assert.equal(slots.length, 18);
   assert.equal(slots.find((slot) => slot.key === 'source').owner, 'app');
   assert.equal(slots.find((slot) => slot.key === 'docsTabs').shape, 'tabs');
   assert.equal(slots.find((slot) => slot.key === 'view').owner, 'app');
+  //  one slot names a nested json key, and urui owns it
+  const theme = slots.find((slot) => slot.key === 'preferences.theme');
+  assert.equal(theme.owner, 'urui');
+  assert.equal(theme.shape, 'scalar');
 
   const cases = [
     ['save', [{source: 'hello'}], 'saved'],

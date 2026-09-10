@@ -9,13 +9,30 @@ const application = process.env.URUI_APP_JS;
 if (!application) throw new Error('set URUI_APP_JS to the assembled bundle');
 const applicationSource = fs.readFileSync(application, 'utf8');
 
+//  The bundle now builds a shell runtime at boot, so the bare context
+//  needs just enough of a document for element lookups to answer null.
+function stubDocument() {
+  const root = {dataset: {}, style: {}, classList: {toggle: () => {}}};
+  return {
+    documentElement: root,
+    querySelector: () => null,
+    addEventListener: () => {}
+  };
+}
+
 function evaluate(source) {
   const window = {
     confirm: () => true,
-    prompt: () => null
+    prompt: () => null,
+    addEventListener: () => {}
   };
   window.window = window;
-  vm.runInNewContext(source, {window});
+  vm.runInNewContext(source, {
+    window,
+    document: stubDocument(),
+    matchMedia: () => ({matches: false, addEventListener: () => {}}),
+    requestAnimationFrame: (callback) => callback()
+  });
   return window;
 }
 
@@ -39,7 +56,7 @@ test('publishes and boots the stable API', () => {
   assert.equal(window.uruiFixture.api, urui);
   assert.deepEqual(Object.keys(urui), [
     'config', 'boot', 'status', 'tabs', 'editor', 'explorer', 'dialog',
-    'session', 'files', 'shortcuts', 'layout', 'problem'
+    'session', 'files', 'shortcuts', 'layout', 'problem', 'runtime'
   ]);
   assert.deepEqual(Object.keys(urui.tabs), [
     'create', 'close', 'select', 'update', 'list', 'active'

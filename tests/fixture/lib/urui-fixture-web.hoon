@@ -27,6 +27,7 @@
               label='Text'
               untitled='Untitled'
               ext=%txt
+              leaf=%txt
               mime='text/plain; charset=utf-8'
               tabs=&
               refs=&
@@ -35,6 +36,7 @@
               label='Note'
               untitled='Preview'
               ext=%md
+              leaf=%md
               mime='text/markdown; charset=utf-8'
               tabs=&
               refs=&
@@ -107,6 +109,7 @@
       ['activeNoteTabId' %urui %active `%note]
       ['nextNoteTab' %urui %next `%note]
       ['view' %app %record ~]
+      ['preferences.theme' %urui %scalar ~]
   ==
 ::
 ++  shortcuts
@@ -139,10 +142,21 @@
 ::
 ++  toolbar
   ^-  marl
-  :~  ;button#echo.primary(type "button"): Echo
-      ;label.toggle
-        ;input#auto-echo(type "checkbox", checked "");
-        ;span: Auto
+  :~  ;nav.toolbar(aria-label "Fixture controls")
+        ;label.theme-control
+          ;span: Theme
+          ;select#theme(aria-label "Theme")
+            ;option(value "system"): System
+            ;option(value "light"): Light
+            ;option(value "dark"): Dark
+          ==
+        ==
+        ;button#help(type "button", aria-expanded "false"): Help
+        ;button#echo.primary(type "button"): Echo
+        ;label.toggle
+          ;input#auto-echo(type "checkbox", checked "");
+          ;span: Auto
+        ==
       ==
   ==
 ::
@@ -257,7 +271,65 @@
     };
   }
 
-  const fixture = {calls: fixtureCalls};
+  const fixture = {
+    calls: fixtureCalls,
+    files: {text: ['notes/txt', 'deep/leaf/txt'], note: []},
+    source: 'fixture source',
+    view: {scale: 1}
+  };
+  const runtime = window.urui.runtime({
+    elements: {
+      explorerPane: document.querySelector('#explorer'),
+      editorPane: document.querySelector('#editor-pane'),
+      resultPane: document.querySelector('#result-pane'),
+      editorStatus: document.querySelector('#source-status'),
+      resultStatus: document.querySelector('#result-status')
+    },
+    editors: () => fixture.editors || [],
+    onChange: fixtureHook('runtime', 'change', undefined),
+    onResize: fixtureHook('runtime', 'resize', undefined),
+    onHelpOpen: fixtureHook('runtime', 'helpOpen', undefined),
+    onTabsRendered: fixtureHook('runtime', 'tabsRendered', undefined),
+    browse: async (kind) => fixture.files[kind] || [],
+    openFile: fixtureHook('files', 'open', undefined),
+    session: {
+      read: (key) => {
+        if (key === 'source') return fixture.source;
+        if (key === 'view') return fixture.view;
+        return undefined;
+      },
+      validate: (key, value) => {
+        if (key === 'source') return typeof value === 'string' ? value : '';
+        if (key === 'view') return value && typeof value === 'object'
+          ? {scale: Number(value.scale) || 1}
+          : undefined;
+        return undefined;
+      }
+    },
+    tabs: {
+      text: {
+        add: 'Add empty Text tab',
+        validate: (candidate, base) => ({
+          selection: candidate.selection || {start: 0, end: 0}
+        }),
+        defaults: (options) => ({
+          selection: options.selection || {start: 0, end: 0}
+        }),
+        empty: () => runtime.tabs.create('text', ''),
+        onCapture: fixtureHook('tabs', 'capture', undefined),
+        onActivate: fixtureHook('tabs', 'activate', undefined),
+        afterActivate: fixtureHook('tabs', 'afterActivate', undefined),
+        onClose: fixtureHook('tabs', 'closed', undefined)
+      },
+      note: {
+        defaults: (options, source) => ({editBaseSource: source}),
+        empty: () => runtime.tabs.create('note', ''),
+        onActivate: fixtureHook('tabs', 'activate', undefined)
+      }
+    }
+  });
+  fixture.runtime = runtime;
+  runtime.wire();
   window.uruiFixture = fixture;
   window.urui.boot({
     onReady(api) {
