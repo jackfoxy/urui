@@ -57,6 +57,17 @@ def destination(dest, relative):
     return target
 
 
+def symlinks(root):
+    found = []
+    for directory, directories, files in os.walk(root, followlinks=False):
+        base = Path(directory)
+        for name in directories + files:
+            path = base / name
+            if path.is_symlink():
+                found.append(path.relative_to(root).as_posix())
+    return sorted(found)
+
+
 def synchronize(dest, paths):
     checksums = {}
     for relative in paths:
@@ -120,6 +131,10 @@ def verify(dest, paths, strict, quiet):
         failed |= status != "in-sync"
         if not quiet or status != "in-sync":
             print(f"{status:16} {relative}")
+    if strict:
+        for relative in symlinks(dest):
+            failed = True
+            print(f"{'symlink':16} {relative}")
     return int(strict and failed)
 
 

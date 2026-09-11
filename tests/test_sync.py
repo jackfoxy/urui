@@ -97,6 +97,18 @@ class SyncTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("symlinked destination directory", result.stderr)
 
+    def test_strict_verify_rejects_any_consumer_symlink(self):
+        self.assertEqual(self.run_sync().returncode, 0)
+        self.assertEqual(self.run_sync("verify", "--strict").returncode, 0)
+        link = self.dest / "linked-app.hoon"
+        link.symlink_to(self.dest / "desk/lib/app.hoon")
+        self.assertEqual(self.run_sync("verify").returncode, 0)
+        result = self.run_sync("verify", "--strict")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("symlink          linked-app.hoon", result.stdout)
+        link.unlink()
+        self.assertEqual(self.run_sync("verify", "--strict").returncode, 0)
+
     def test_removed_source_deletes_only_its_previous_copy(self):
         self.assertEqual(self.run_sync().returncode, 0)
         (self.source / "desk/lib/urui-http.hoon").unlink()

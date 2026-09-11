@@ -91,8 +91,9 @@ doubles, and Ace shortcut inventory. There is no watcher or automatic sync.
 Edit shared files in urui, then sync manually. The consumer's
 `.urui-sync.json` records last-synced checksums so verification distinguishes
 `in-sync`, `stale`, `missing`, and `modified-locally`. Normal build scripts
-warn about drift; `--strict` makes it a release failure. Sync overwrites
-listed consumer copies, so inspect local modifications before syncing.
+warn about drift; `--strict` makes drift or any symlink anywhere in the
+consumer checkout a release failure. Sync overwrites listed consumer copies,
+so inspect local modifications before syncing.
 
 Copy the consumer's `desk/` directly into its mounted desk and `|commit`.
 `stage-desk.sh` is needed only to assemble urui's disposable fixture desk.

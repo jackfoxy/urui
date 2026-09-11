@@ -264,11 +264,17 @@ to build, test, or release either repository. The user will run verification.
 
 ## Phase 6 — Packaging and delivery verification
 
-### W6.1 — No-symlink gate
+### W6.1 — No-symlink gate (done 2026-09-10)
 
 Add `find graph-viz -type l` (must be empty) to `verify-sync.sh --strict`.
 Verify: passes clean, fails on a planted symlink.
 Scope: S — <1h.
+
+Completed: strict verification walks the complete consumer checkout without
+following directory links, reports every symlink, and fails if any is found.
+Non-strict verification remains a drift-only warning. The unit case proves a
+clean strict pass, failure on a planted unmanaged link, and recovery after its
+removal. The user will run verification.
 
 ### W6.2 — Clean-checkout drill
 

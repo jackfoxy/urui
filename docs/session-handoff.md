@@ -8,12 +8,12 @@ commentary. The user performs Git commits. Do not commit unless asked.
 
 ## Current state
 
-**W5.2 is complete.** Continue with **W6.1** (the no-symlink gate)
+**W6.1 is complete.** Continue with **W6.2** (the clean-checkout drill)
 in `docs/remaining-work-plan.md`, the live plan. Verification and contracts
 for stages 5–7 are recorded in `docs/w4.3-runtime-extraction.md` and the plan.
 
-W4.4 is committed in urui as `143fd58` and graph-viz as `b7bafc2`.
-**W5.1 and W5.2 are uncommitted in both repositories.**
+W5 is committed in urui as `acd9bc1` and graph-viz as `fc97752`;
+graph-viz's follow-up test fix is `afd128e`. **W6.1 is uncommitted in urui.**
 
 W4.3 could not be done as written: it presumes the generic browser runtime
 already lives in urui, and W3.5 as executed extracted only the contract. The
@@ -104,26 +104,22 @@ urui:
 
 ```text
 README.md
+bin/sync.py
+bin/verify-sync.sh
 docs/remaining-work-plan.md
 docs/session-handoff.md
+tests/test_sync.py
 ```
 
 graph-viz:
 
 ```text
-README.md
-RELEASE.md
-desk/tests/app/graph-viz-web.hoon
-desk/tests/lib/gviz-web.hoon
-tests/browser/real/editor-surface.spec.js
-tests/browser/real/session-compat.spec.js  (new)
+(clean)
 ```
 
-W5.1 adds the reduced I2 adapter-wiring arm, the I6 Clay browse-failure arm
-and browser focus-restoration case, and the I4 v1 session compatibility case.
-W5.2 documents graph-viz installation and release, and urui's contract, sync
-ownership, and test harness. No build or test was run; the user owns
-verification and commits.
+W6.1 makes strict sync verification reject every symlink in the consumer
+checkout and adds a planted-link regression case. No build or test was run;
+the user owns verification and commits.
 
 Records in `~/FoxyLabs/urui`: `baseline-digests.txt`, `fixture-digests.txt`.
 
