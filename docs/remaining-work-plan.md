@@ -232,14 +232,20 @@ both `test:shortcuts` commands.
 
 ## Phase 5 — graph-viz adoption complete
 
-### W5.1 — Reduced integration matrix
+### W5.1 — Reduced integration matrix (done 2026-09-10)
 
 Add I2, I4, I6 (§3.6 of the extraction plan), including
 `session-compat.spec.js` seeded from the W0.2 fixture.
 Verify: green. Done: the 6-item integration matrix is complete.
 Scope: M — 4–6h.
 
-### W5.2 — Docs
+Completed: I2 checks the emitted shell and adapter wiring; I4 loads the W0.2
+v1 fixture and covers restored tabs/view plus Clay open, edit, save, and
+reload; I6 covers exact parse annotations and a Clay failure modal with focus
+restoration. Together with the retained I1, I3, and I5 coverage, all six
+matrix items are present. The user will run the Hoon and Chromium suites.
+
+### W5.2 — Docs (done 2026-09-10)
 
 `graph-viz/README.md` (install by copying `desk/` directly, no staging;
 urui checkout needed only for `sync.sh`), `RELEASE.md` (no-symlink check +
@@ -248,6 +254,13 @@ sync verify + the urui revision recorded in release notes), `urui/README.md`
 Done: a clean-clone reader can build, test, and release without this plan
 document.
 Scope: S — 2–3h.
+
+Completed: graph-viz documents direct desk installation, the optional sibling
+checkout for syncing, and its application-only test coverage. Its release
+checklist now gates symlinks and strict sync, and requires the exact urui SHA
+in release notes. urui documents the public contract, ownership/sync table,
+and layered fixture harness. A clean-checkout reader no longer needs this plan
+to build, test, or release either repository. The user will run verification.
 
 ## Phase 6 — Packaging and delivery verification
 
