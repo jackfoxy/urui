@@ -8,17 +8,18 @@ commentary. The user performs Git commits. Do not commit unless asked.
 
 ## Current state
 
-Stage 6 completed after WD.1 and Stage 5. Continue with **Stage 7** in
-`docs/remaining-work-plan.md`, the live plan. Stage 5 and Stage 6 verification
-and contracts are recorded in `docs/w4.3-runtime-extraction.md`.
+**W4.3 is complete.** Continue with **W4.4** (the shortcut manifest) in
+`docs/remaining-work-plan.md`, the live plan. Verification and contracts for
+stages 5–7 are recorded in `docs/w4.3-runtime-extraction.md` and the plan.
 
 Stage 5 is committed in both repositories — urui `381aa74`, graph-viz
-`8afc0a5`. Stage 6 is **uncommitted**.
+`8afc0a5`. Stage 6 (urui `2b782f5`, graph-viz `0e845ee`) is committed;
+**W4.3.7 is uncommitted in both repositories.**
 
-**W4.3 is open.** It could not be done as written: it presumes the generic
-browser runtime already lives in urui, and W3.5 as executed extracted only
-the contract. The agreed answer (2026-09-10) was to extract the runtime
-first, in seven stages. Six are done:
+W4.3 could not be done as written: it presumes the generic browser runtime
+already lives in urui, and W3.5 as executed extracted only the contract. The
+agreed answer (2026-09-10) was to extract the runtime first, in seven stages.
+All seven are done:
 
 | Stage | Content | State |
 |---|---|---|
@@ -28,16 +29,15 @@ first, in seven stages. Six are done:
 | 4 | persistence: the slot registry, load/save, the shared validators, the shared-source url parameter | done, verified |
 | 5 | clay file operations and the shortcut dispatcher | done, verified |
 | 6 | the fixture becomes a real consumer: both Ace editors mounted, editor test hooks, `#editor-load-error` | done, verified |
-| 7 | W4.3 proper: move the specs | not started |
+| 7 | W4.3 proper: move the specs | done, verified |
 
 `docs/w4.3-runtime-extraction.md` is the working record — the staging
 table, what each landed stage owns, the runtime's option and return
 surface, and the next step. **Read it before continuing.**
 
-**Mark W4.3 complete in the plan only when stage 7 lands**, with the usual
-completion note and the executed-test counts recorded in both READMEs.
-No Stage 7 spec has moved. `fixture-editors.spec.js` is Stage 6 coverage and
-joins the existing `ace-assets.spec.js` and `fixture-smoke.spec.js`.
+W4.3 is marked complete in `~/FoxyLabs/urui/urui-extraction-plan.md` and in
+the live plan, with the executed-test counts recorded in both READMEs: urui
+**50 Chromium cases**, graph-viz **14**.
 
 ## Tooling added this session
 
@@ -54,6 +54,24 @@ joins the existing `ace-assets.spec.js` and `fixture-smoke.spec.js`.
   `hoon-test.js` — each of its nine arms recompiles all three assets and
   the runtime cord they embed is ~2,400 lines. It needs `-test` on a ship.
   Locally, compile once and sweep its needles instead.
+
+## Verification, as of W4.3.7
+
+- Chromium: urui **50 passed**, graph-viz **14 passed** (64 executed,
+  against the 54-case W0.3 baseline)
+- urui's seven shared suites plus fixture-web through `bin/hoon-test.js`:
+  **73 arms ok**
+- urui Node: 10 scenarios, the core tests, and the Ace config test pass
+- graph-viz's asset needle sweep: **130 needles, zero problems**
+- `verify-sync.sh --strict`: 24 files in sync; every touched Hoon file
+  parses through `bin/hoon-parse.js`
+- digests: graph-viz page and CSS unchanged, its JavaScript re-recorded;
+  all three fixture assets re-recorded
+
+**Owed:** `-test /=urui-fixture=/tests ~` on a ship — the fixture's app
+suite now asserts that its emitted Ace config names `ace/mode/fixture`,
+which only the desk runner can check — plus the standing
+`-test /=graph-viz=/tests ~` and `-test /=urui=/tests ~`.
 
 ## Verification, as of Stage 6
 
@@ -81,27 +99,25 @@ Stage 6 changes all three fixture assets; their accepted values are in
 urui:
 
 ```text
-bin/hoon-test.js
+README.md
+desk/lib/urui-js.hoon
 docs/remaining-work-plan.md
 docs/session-handoff.md
 docs/w4.3-runtime-extraction.md
-tests/browser/doubles/dom.js
-tests/browser/doubles/index.js
-tests/browser/real/fixture-editors.spec.js
-tests/browser/scenarios/editor-adapter.js
+tests/browser/real/*.spec.js  (the moved specs and their backend double)
+tests/browser/scenarios/{files,runtime,session}.js
 tests/browser/urui-core.test.js
-tests/fixture/app/urui-fixture.hoon
 tests/fixture/lib/urui-fixture-web.hoon
 tests/fixture/tests/app/urui-fixture.hoon
-tests/fixture/tests/lib/urui-fixture-web.hoon
 ```
 
 graph-viz:
 
 ```text
+README.md
 .urui-sync.json
-tests/browser/doubles/dom.js
-tests/browser/doubles/index.js
+desk/lib/urui-js.hoon
+tests/browser/real/*.spec.js  (six deleted, four trimmed to their app half)
 ```
 
 Records in `~/FoxyLabs/urui`: `baseline-digests.txt`, `fixture-digests.txt`.

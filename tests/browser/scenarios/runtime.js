@@ -105,7 +105,7 @@ module.exports = async (env) => {
   //  a path's last segment is the clay leaf, not a file name
   assert.equal(tabs.label('text', ''), 'Untitled');
   assert.equal(tabs.label('note', ''), 'Preview');
-  assert.equal(tabs.label('text', 'notes/txt'), 'notes.txt');
+  assert.equal(tabs.label('text', 'notes/txt'), 'notes.text');
   assert.equal(tabs.label('text', 'txt'), 'txt');
 
   const first = tabs.create('text', 'alpha');
@@ -114,7 +114,7 @@ module.exports = async (env) => {
   assert.deepEqual(first.selection, {start: 0, end: 0});
   const second = tabs.create('text', 'beta', {path: 'notes/txt'});
   assert.equal(second.id, 'text-2');
-  assert.equal(second.label, 'notes.txt');
+  assert.equal(second.label, 'notes.text');
   assert.equal(tabs.next('text'), 3);
 
   tabs.select('text', first.id);
@@ -137,7 +137,7 @@ module.exports = async (env) => {
   assert.equal(controls.length, 2);
   assert.equal(controls[1].classes.has('active'), true);
   assert.equal(controls[1].children[0]['aria-selected'], 'true');
-  assert.equal(controls[1].children[0].textContent, 'notes.txt');
+  assert.equal(controls[1].children[0].textContent, 'notes.text');
   assert.equal(controls[1].children[1].textContent, 'X');
   assert.equal(controls[0].draggable, true);
 
@@ -298,7 +298,7 @@ module.exports = async (env) => {
   assert.equal(written.version, 1);
   assert.equal(written.source, 'saved body');
   //  a dotted slot key nests, it does not become a flat key
-  assert.deepEqual(written.preferences, {theme: 'dark'});
+  assert.deepEqual(written.preferences, {autoEcho: true, theme: 'dark'});
   assert.equal(written['preferences.theme'], undefined);
   assert.deepEqual(Object.keys(written).filter((key) => {
     return key.startsWith('next');
@@ -358,12 +358,16 @@ module.exports = async (env) => {
 
   //  ---- shared source in the url ------------------------------------
   //
-  //  The fixture declares no share parameter, so the import is refused
-  //  rather than silently accepting an arbitrary payload.
-  assert.equal(app.api.config.shareParam, null);
+  //  The fixture declares a share parameter, so a link carries one source
+  //  and only what `encodeSource` itself would have produced.
+  assert.deepEqual(app.api.config.shareParam,
+    {name: 'text', max: 12_288, paramMax: 16_384});
+  assert.equal(session.encodeSource('abc'), 'YWJj');
+  assert.equal(session.decodeSource('YWJj'), 'abc');
+  //  no parameter in the url is not a failure: it is no shared source
   assert.equal(session.sourceFromUrl(), undefined);
-  assert.throws(() => session.decodeSource('YWJj'),
-    /does not share sources/);
+  assert.throws(() => session.decodeSource('YWJj='), /is invalid/);
+  assert.throws(() => session.decodeSource(''), /missing or too large/);
 
   //  the byte limit counts utf-8, not code units
   assert.equal(session.byteLength('a🙂'), 5);

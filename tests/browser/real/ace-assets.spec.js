@@ -63,13 +63,13 @@ test('fixture loads a real text editor and shared Ace modules', async ({
   });
   expect(state).toEqual({
     config: {
-      version: '1.44.0', basePath: base, mode: 'ace/mode/text',
+      version: '1.44.0', basePath: base, mode: 'ace/mode/fixture',
       lightTheme: 'ace/theme/github', darkTheme: 'ace/theme/monokai',
       extensions: ['ace/ext/beautify', 'ace/ext/prompt',
         'ace/ext/searchbox', 'ace/ext/settings_menu'],
       useWorker: false
     },
-    version: '1.44.0', mode: 'ace/mode/text',
+    version: '1.44.0', mode: 'ace/mode/fixture',
     source: 'fixture text\nsecond line', worker: false, frozen: true,
     modules: Array(7).fill('object')
   });

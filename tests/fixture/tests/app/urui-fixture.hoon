@@ -105,7 +105,7 @@
   ;:  weld
     (expect-eq !>(200) !>((response-status cards)))
     (expect !>(?=(^ (find "uruiFixtureAceAssets" body))))
-    (expect !>(?=(^ (find "ace/mode/text" body))))
+    (expect !>(?=(^ (find "ace/mode/fixture" body))))
   ==
 ::
 ++  test-echo-returns-the-posted-body

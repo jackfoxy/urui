@@ -31,7 +31,12 @@ function evaluate(source) {
     window,
     document: stubDocument(),
     matchMedia: () => ({matches: false, addEventListener: () => {}}),
-    requestAnimationFrame: (callback) => callback()
+    requestAnimationFrame: (callback) => callback(),
+    //  a bundle that queues its startup record needs timers to exist; it
+    //  does not need them to fire, and firing them here would run a save
+    //  against a context that has no storage
+    setTimeout: () => 0,
+    clearTimeout: () => {}
   });
   return window;
 }

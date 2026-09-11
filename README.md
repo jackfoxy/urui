@@ -105,6 +105,15 @@ appropriate):
 The browser harness needs a `vere` binary that supports `eval`; it compiles
 the fixture's page, css, and app.js from desk sources without a ship.
 
+`run-real.sh` executes **50 Chromium cases** against the fixture, and they
+are where generic behavior is proved: the Ace baseline in full (editing and
+navigation chords, the remaining chords, macros, undo/redo, the adapter
+smoke and its load failure, the pinned module set) plus the shell's own
+half of the editor surface, lifecycle, document tabs, and shortcut
+boundaries. A consumer's suite keeps only what that application alone can
+show — graph-viz's `run-real.sh` is **14 cases** — so no generic behavior
+is proved twice.
+
 ## Status
 
 W3.1 extracts Clay path validation and browse JSON. Graph-viz consumes the

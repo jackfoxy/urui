@@ -59,7 +59,7 @@ module.exports = async (env) => {
   request = await reply('original');
   assert.equal(request.options.headers[endpoints.pathHeader], 'a/txt');
   const tab = await operation;
-  assert.equal(tab.label, 'a.txt');
+  assert.equal(tab.label, 'a.text');
   assert.equal(tab.cleanSource, 'original');
   assert.equal(tabs.active('text'), tab);
   assert.equal(await files.load('text', 'a/txt'), tab);
