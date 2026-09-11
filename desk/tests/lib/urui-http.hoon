@@ -1,7 +1,6 @@
 ::  Tests for /lib/urui-http.
 ::
-::  The response shape is a contract with every consuming agent: W3.2
-::  rewrites graph-viz's routing table against these arms, and a change
+::  The response shape is a contract with every consuming agent; a change
 ::  here is a change to every consumer's wire behavior.
 ::
 /+  *test, uhttp=urui-http

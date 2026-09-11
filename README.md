@@ -130,6 +130,9 @@ VERE=/path/to/vere tests/browser/run-real.sh
 #  Ace Windows/Linux inventory and fixture collision accounting
 npm run test:shortcuts
 
+#  Consumer-vocabulary purity (also run by test:browser and verify-sync.sh)
+npm run test:purity
+
 #  Phase 3 gate: compare assets with the accepted work-unit baselines
 VERE=/path/to/vere bin/asset-digest.sh --consumer ../graph-viz
 VERE=/path/to/vere bin/asset-digest.sh --spec bin/assets-urui-fixture.txt

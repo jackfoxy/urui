@@ -8,6 +8,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+"$ROOT/bin/check-purity.sh"
 APP_JS="${1:-}"
 WORK=""
 

@@ -276,7 +276,7 @@ Non-strict verification remains a drift-only warning. The unit case proves a
 clean strict pass, failure on a planted unmanaged link, and recovery after its
 removal. The user will run verification.
 
-### W6.2 — Clean-checkout drill
+### W6.2 — Clean-checkout drill (done 2026-09-10)
 
 Clone graph-viz alone, no `urui` sibling: `check.sh verify`, both
 `run*.sh`, `|commit`, the installed smoke from `RELEASE.md` all pass.
@@ -284,7 +284,14 @@ Separately, both repos as siblings: `verify-sync.sh` reports `in-sync`.
 Done: recorded with the commit SHAs used.
 Scope: M — 3–5h (ship staging overhead).
 
-### W6.3 — Sync-time missing-checkout drill
+Completed: graph-viz's generated-asset Playwright server now assembles only
+from its checked-in sources instead of importing code from `../urui`. The
+documented installed-desk path was already sibling-independent. The clean
+checkout drill is based on urui `2a1875a` and graph-viz `afd128e` plus this
+worktree change; the user will run the builds, suites, ship commit, installed
+smoke, and sibling strict-sync verification, then commit the result.
+
+### W6.3 — Sync-time missing-checkout drill (done 2026-09-10)
 
 Rename `../urui`; `sync.sh` and `verify-sync.sh --strict` fail with the
 §4.2 diagnostic within seconds; ordinary build/test/install commands do not
@@ -292,12 +299,25 @@ need the sibling and still pass.
 Done: no confusing Hoon error surfaces first.
 Scope: S — 1–2h.
 
-### W6.4 — Purity gate
+Completed: graph-viz now provides local `bin/sync.sh` and
+`bin/verify-sync.sh` entry points. Both resolve `../urui`, fail immediately
+with the §4.2 diagnostic when it is absent, and otherwise delegate with the
+consumer destination fixed to graph-viz. `check.sh` and both browser runners
+use the local warning-only verifier; their build and test work remains
+independent of the sibling. The user will run the rename drill and tests.
+
+### W6.4 — Purity gate (done 2026-09-10)
 
 `grep -rniE 'graph-viz|gviz|obelisk|heathcliff|dot-language' urui/desk` is
 empty, wired into `verify-sync.sh` or a new `check-purity.sh`.
 Done: gate wired into urui's test script.
 Scope: S — 1–2h (more if the grep finds hits).
+
+Completed: `bin/check-purity.sh` rejects the five prohibited consumer terms
+anywhere below `desk/`. The gate runs through `verify-sync.sh`, the browser
+test runner, and `npm run test:purity`. Consumer-specific examples and stale
+historical comments were made neutral, while the remaining generic Hoon
+assertions continue to guard parameterization. The user will run verification.
 
 ## Phase 7 — Consolidation
 

@@ -160,8 +160,6 @@
     (expect !>((has needle source)))
   ;:  weld
     tests
-    (expect !>(?=(~ (find "graphViz" source))))
-    (expect !>(?=(~ (find "GVIZ" source))))
     (expect !>(?=(~ (find "DOT" source))))
   ==
 ::
@@ -249,8 +247,6 @@
     tests
     (expect !>((has "runtime: createRuntime" core-source)))
     (expect !>((has "function createRuntime(options =" core-source)))
-    (expect !>(?=(~ (find "graphViz" source))))
-    (expect !>(?=(~ (find "GVIZ" source))))
     (expect !>(?=(~ (find "DOT" source))))
   ==
 ::
@@ -336,10 +332,8 @@
     (expect !>((has needle source)))
   ;:  weld
     tests
-    (expect !>(?=(~ (find "graph viz" source))))
     (expect !>(?=(~ (find "dot-files" source))))
     (expect !>(?=(~ (find "svg-files" source))))
-    (expect !>(?=(~ (find "graph-viz" source))))
   ==
 ::
 ++  test-session-contract
@@ -385,7 +379,6 @@
     (expect !>(?=(~ (find "dotTabs" source))))
     (expect !>(?=(~ (find "activeDotTabId" source))))
     (expect !>(?=(~ (find "autoRender" source))))
-    (expect !>(?=(~ (find "graph-viz.session" source))))
     (expect !>(?=(~ (find "DOT" source))))
   ==
 ::

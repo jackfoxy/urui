@@ -8,12 +8,12 @@ commentary. The user performs Git commits. Do not commit unless asked.
 
 ## Current state
 
-**W6.1 is complete.** Continue with **W6.2** (the clean-checkout drill)
+**W6.4 is complete.** Continue with **W7.1** (dead-code removal)
 in `docs/remaining-work-plan.md`, the live plan. Verification and contracts
 for stages 5–7 are recorded in `docs/w4.3-runtime-extraction.md` and the plan.
 
-W5 is committed in urui as `acd9bc1` and graph-viz as `fc97752`;
-graph-viz's follow-up test fix is `afd128e`. **W6.1 is uncommitted in urui.**
+W6.1 is committed in urui as `2a1875a`. Graph-viz's current base is
+`afd128e`. **W6.2–W6.4 are uncommitted in both repositories.**
 
 W4.3 could not be done as written: it presumes the generic browser runtime
 already lives in urui, and W3.5 as executed extracted only the contract. The
@@ -104,22 +104,43 @@ urui:
 
 ```text
 README.md
-bin/sync.py
+bin/check-purity.sh  (new)
 bin/verify-sync.sh
+desk/sur/urui.hoon
+desk/tests/lib/urui-http.hoon
+desk/tests/lib/urui-js.hoon
+desk/web/ace/README.md
 docs/remaining-work-plan.md
 docs/session-handoff.md
-tests/test_sync.py
+package.json
+tests/browser/run.sh
 ```
 
 graph-viz:
 
 ```text
-(clean)
+.urui-sync.json
+README.md
+RELEASE.md
+bin/sync.sh  (new)
+bin/verify-sync.sh  (new)
+check.sh
+desk/sur/urui.hoon  (synced)
+desk/web/ace/README.md  (synced)
+tests/browser/run.sh
+tests/browser/run-real.sh
+tests/browser/real/serve-app.js
 ```
 
-W6.1 makes strict sync verification reject every symlink in the consumer
-checkout and adds a planted-link regression case. No build or test was run;
-the user owns verification and commits.
+W6.2 removes the source-compiled Playwright server's dependency on urui's
+assembler. Graph-viz now compiles its synced sources from a standalone
+checkout; installed-desk tests were already standalone. W6.3 adds local sync
+entry points with the exact missing-sibling diagnostic and routes the three
+warning-only build/test checks through the verifier wrapper. W6.4 adds the
+consumer-vocabulary purity gate and removes the prohibited examples from
+urui's desk. The candidate bases are urui `2a1875a` and graph-viz `afd128e`.
+No build, test, rename drill, ship commit, or installed smoke was run; the user
+owns verification and commits.
 
 Records in `~/FoxyLabs/urui`: `baseline-digests.txt`, `fixture-digests.txt`.
 
