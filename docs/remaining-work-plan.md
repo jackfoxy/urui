@@ -321,12 +321,19 @@ assertions continue to guard parameterization. The user will run verification.
 
 ## Phase 7 — Consolidation
 
-### W7.1 — Dead-code removal
+### W7.1 — Dead-code removal (done 2026-09-10)
 
 Delete dead code left in graph-viz (superseded helpers, the old monolith
 runner, `graph-viz-config.js` remnants).
 Verify: full gate green. Done: `git grep` finds no orphan.
 Scope: M — 3–5h.
+
+Completed: graph-viz drops the unused DOM/runtime aliases left by extraction,
+renames the reduced application-scenario launcher from the old monolith name,
+and removes the legacy static Ace-config fixture. The generated configuration
+test now asserts its complete object, setup calls, and frozen state directly;
+the generated `/graph-viz-config.js` compatibility route remains live. The
+user will run the full gate.
 
 ## Phase 8 — obelisk adoption, increment 1
 
