@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const {test, expect} = require('@playwright/test');
 const {installBackend} = require('./fixtures/backend.js');
-const manifest = require('../../../../graph-viz/tests/browser/ace-win-linux-shortcuts.json');
+const manifest = require('../ace-win-linux-shortcuts.json');
 
 const groups = ['Line Operations', 'Selection', 'Go to'];
 const commandByAction = {

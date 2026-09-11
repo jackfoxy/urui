@@ -207,7 +207,7 @@ Owed: `-test /=urui-fixture=/tests ~` on a ship. The fixture's app suite
 asserts the emitted Ace config names `ace/mode/fixture`, which only the
 desk runner can check.
 
-### W4.4 — Shortcut manifest
+### W4.4 — Shortcut manifest (done 2026-09-10)
 
 Files: move `ace-win-linux-shortcuts.json` + its baseline test +
 `ace-editor-baseline.md` to urui; sync the JSON back into graph-viz (§4.1 of
@@ -221,6 +221,14 @@ Verify: `npm --prefix urui run test:shortcuts` and `npm run test:shortcuts`
 Done: one source of truth for the baseline; `verify-sync.sh --strict`
 reports the JSON in-sync.
 Scope: S–M — 2–4h.
+
+Completed: urui owns the Ace Windows/Linux manifest, its accounting test, and
+the editor-baseline record. The two real-browser shortcut specs read the local
+manifest. Graph-viz keeps only its application manifest and collision test;
+the baseline JSON is a checksum-synced consumer copy.
+
+Verified: strict sync reports all 25 managed files in sync. The user will run
+both `test:shortcuts` commands.
 
 ## Phase 5 — graph-viz adoption complete
 

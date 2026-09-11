@@ -82,6 +82,9 @@ npm install
 VERE=/path/to/vere tests/browser/run.sh
 VERE=/path/to/vere tests/browser/run-real.sh
 
+#  Ace Windows/Linux inventory and fixture collision accounting
+npm run test:shortcuts
+
 #  Phase 3 gate: compare assets with the accepted work-unit baselines
 VERE=/path/to/vere bin/asset-digest.sh --consumer ../graph-viz
 VERE=/path/to/vere bin/asset-digest.sh --spec bin/assets-urui-fixture.txt
@@ -113,6 +116,11 @@ half of the editor surface, lifecycle, document tabs, and shortcut
 boundaries. A consumer's suite keeps only what that application alone can
 show — graph-viz's `run-real.sh` is **14 cases** — so no generic behavior
 is proved twice.
+
+`tests/browser/ace-win-linux-shortcuts.json` is the source of truth for the
+100-row Ace Windows/Linux inventory. It is checksum-synced into consumers;
+the adjacent Node test accounts for 102 executions, 97 bindings, five
+exclusions, five duplicates, and the fixture's one override.
 
 ## Status
 

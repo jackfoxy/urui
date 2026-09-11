@@ -22,3 +22,4 @@ tests/browser/doubles/fetch.js
 tests/browser/doubles/index.js
 tests/browser/doubles/media.js
 tests/browser/doubles/storage.js
+tests/browser/ace-win-linux-shortcuts.json

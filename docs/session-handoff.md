@@ -8,13 +8,12 @@ commentary. The user performs Git commits. Do not commit unless asked.
 
 ## Current state
 
-**W4.3 is complete.** Continue with **W4.4** (the shortcut manifest) in
-`docs/remaining-work-plan.md`, the live plan. Verification and contracts for
-stages 5–7 are recorded in `docs/w4.3-runtime-extraction.md` and the plan.
+**W4.4 is complete.** Continue with **W5.1** (the reduced integration matrix)
+in `docs/remaining-work-plan.md`, the live plan. Verification and contracts
+for stages 5–7 are recorded in `docs/w4.3-runtime-extraction.md` and the plan.
 
-Stage 5 is committed in both repositories — urui `381aa74`, graph-viz
-`8afc0a5`. Stage 6 (urui `2b782f5`, graph-viz `0e845ee`) is committed;
-**W4.3.7 is uncommitted in both repositories.**
+W4.3.7 is committed in both repositories — urui `02a68c4`, graph-viz
+`ac2314a`. **W4.4 is uncommitted in both repositories.**
 
 W4.3 could not be done as written: it presumes the generic browser runtime
 already lives in urui, and W3.5 as executed extracted only the contract. The
@@ -38,6 +37,11 @@ surface, and the next step. **Read it before continuing.**
 W4.3 is marked complete in `~/FoxyLabs/urui/urui-extraction-plan.md` and in
 the live plan, with the executed-test counts recorded in both READMEs: urui
 **50 Chromium cases**, graph-viz **14**.
+
+W4.4 moves `ace-win-linux-shortcuts.json`, `ace-shortcuts.test.js`, and
+`ace-editor-baseline.md` into urui. The manifest is synced back to graph-viz;
+graph-viz retains only its application manifest and collision test. Strict
+sync reports **25 files in sync**. The two `test:shortcuts` commands are owed.
 
 ## Tooling added this session
 
@@ -100,24 +104,25 @@ urui:
 
 ```text
 README.md
-desk/lib/urui-js.hoon
+bin/sync-manifest.txt
 docs/remaining-work-plan.md
 docs/session-handoff.md
-docs/w4.3-runtime-extraction.md
-tests/browser/real/*.spec.js  (the moved specs and their backend double)
-tests/browser/scenarios/{files,runtime,session}.js
-tests/browser/urui-core.test.js
-tests/fixture/lib/urui-fixture-web.hoon
-tests/fixture/tests/app/urui-fixture.hoon
+tests/browser/ace-editor-baseline.md
+tests/browser/ace-shortcuts.test.js
+tests/browser/ace-win-linux-shortcuts.json
+tests/browser/real/ace-{editing-navigation,remaining}-shortcuts.spec.js
 ```
 
 graph-viz:
 
 ```text
-README.md
 .urui-sync.json
-desk/lib/urui-js.hoon
-tests/browser/real/*.spec.js  (six deleted, four trimmed to their app half)
+README.md
+package.json
+tests/browser/ace-editor-baseline.md  (deleted; now owned by urui)
+tests/browser/ace-shortcuts.test.js   (deleted; now owned by urui)
+tests/browser/ace-win-linux-shortcuts.json  (synced copy)
+tests/browser/app-shortcuts.test.js
 ```
 
 Records in `~/FoxyLabs/urui`: `baseline-digests.txt`, `fixture-digests.txt`.
