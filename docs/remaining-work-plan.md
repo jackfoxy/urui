@@ -48,7 +48,7 @@ one new test, ordinary verification. **L** cross-repo, new test
 infrastructure, or an unresolved assumption. W4.3.5/.6 are done and carry
 none; Phase 8's are provisional until W8.1 resolves A-OBELISK.
 
-### WD.1 — Bring core/arm documentation up to date
+### WD.1 — Bring core/arm documentation up to date (done 2026-09-11)
 
 Files: `desk/sur/urui.hoon`, `desk/lib/urui-{js,config,shell,css,clay,http,
 ace}.hoon`.
@@ -71,6 +71,40 @@ Done: no arm in the seven libs or `sur/urui.hoon` is under- or
 over-documented relative to the obelisk exemplar; this is the baseline the
 items below are held to.
 Scope: M — 4–6h.
+
+Completed: every top-level arm in the seven libs and every `+$` in
+`sur/urui.hoon` carries a preceding `::`; descriptions were added only
+where a cross-file coupling is not legible from the arm's name and `^-`.
+`urui-js` gained the six section banners its Stage-1 region never got
+(shell frame, theme, status, layout, dialogs, wiring) plus one for the
+object `++runtime` returns, and its header no longer claims that options
+are documented at banners that did not exist; `++editor-adapter` now
+documents its option record; the `dot-7` example in the persistence
+section was made consumer-neutral, and the documentation banner's claim
+that the table of contents comes from `docsRoot` was corrected: the code
+probes the ship's `/docs` and reads `${config.appId.base}/doc.toc`, using
+`docsRoot` only for a leaf's iframe. `urui-shell` documents the id
+derivations the runtime binds (`{view}-tab/-panel/-tree`,
+`{kind}-document-tabs`, the fixed dialog ids) and why a tall-attribute
+element carries a hidden span. `urui-css` names what each section owns
+and records that `.pane-title`, `.pane-actions`, `.pane-body`, and
+`.editor-host` are deliberately unstyled. `urui-clay` and `urui-http`
+moved their core header above `|%`, matching the other five files.
+`sur/urui.hoon` records that `permanent-views` selects the full or
+compact frame.
+
+Verified: urui's seven lib suites **70 arms ok**, fixture-web **3 arms
+ok**, 10 Node scenarios, the core tests and the Ace config test pass, the
+purity gate is clean, and no line exceeds 80 characters. Fixture page and
+CSS digests are unchanged; JavaScript is re-recorded at
+`8ba81f64… 97213` — the section banners live inside the emitted cords, so
+2.8 KB of comments ship to the browser, as they already did for the eight
+pre-existing banners.
+
+Not fixed here, recorded for a later item: `urui-css ++shell` still
+carries three `#dot` rules, which are graph-viz's editor host id;
+`bin/check-purity.sh` greps `dot-language`, not bare `dot`, so the gate
+does not see them. urui's own fixture references no `#dot`.
 
 ## Phase 4 — Runtime extraction & test migration
 
