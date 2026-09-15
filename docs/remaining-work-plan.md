@@ -394,12 +394,12 @@ rules.
 Verify: obelisk's existing tests + visual check in both themes.
 Scope: M — 4–6h.
 
-### W8.4 — Explorer adoption
+### ~~W8.4 — Explorer adoption~~ (moved 2026-09-15)
 
-Adopt `++explorer` + `++file-tree` for the Schemas/Files strip, adding the
-resizer.
-Verify: obelisk browser checks.
-Scope: L — ~1 day (replaces obelisk's own explorer).
+~~Adopt `++explorer` + `++file-tree` for the Schemas/Files strip, adding the
+resizer.~~ Folded into **W11.1** of `pane-model-plan.md`: obelisk adopts
+`++explorer` and the pane model in one pass instead of adopting the old
+explorer and immediately rewriting it. Its ~1 day moves there.
 
 ### W8.5 — Session slots
 
@@ -409,8 +409,10 @@ obelisk string in urui.
 Scope: S — 2–3h.
 
 Phases 9+ (full shell — Ace, document tabs, dialogs, shortcuts, the area-3
-grid as a slot) stay out of committed scope per decision 4; W8.1's inventory
-is their input.
+grid as a slot) are now planned in `pane-model-plan.md`, which supersedes
+decision 4's deferral: Phase 9 lands the band/tab-level pane model in urui,
+Phase 10 migrates graph-viz, Phase 11 gives obelisk its three panes. W8.1's
+inventory is still their input.
 
 ## Estimated remaining effort
 
@@ -429,11 +431,11 @@ is their input.
 | W8.1 | L | 1–2 days |
 | W8.2 | L | ~1 day |
 | W8.3 | M | 4–6h |
-| W8.4 | L | ~1 day |
 | W8.5 | S | 2–3h |
 
-WD.1 through W7.1: ≈36h (~5–6 focused days). Phase 8: ≈29h (~4–5 days),
-provisional until W8.1 resolves A-OBELISK. Total ≈65h.
+WD.1 through W7.1: ≈36h (~5–6 focused days). Phase 8: ≈21h (~3–4 days)
+after W8.4 moved out, provisional until W8.1 resolves A-OBELISK. Total
+≈57h, plus ≈12–14 days for Phases 9–11 in `pane-model-plan.md`.
 
 ## Rollback points (carried forward unchanged)
 

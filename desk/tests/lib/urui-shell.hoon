@@ -2,7 +2,7 @@
 ::
 ::  The shell is asserted structurally — tags, attributes, and order — not
 ::  by searching the rendered text.  A substring test passes when the same
-::  id appears in the wrong element, which is exactly the mistake Phase 3's
+::  id appears in the wrong element, which is exactly the mistake a frame
 ::  rewrite could make.
 ::
 ::  The spec below is a probe, not the browser fixture: keeping it here
@@ -21,48 +21,111 @@
     title.app-id  'Probe'
   ==
 ::
-++  reference-area
-  ::  heading, tab strip, no status, no secondary
-  ^-  area:urui
+++  pinned
+  ::  A band the user cannot hide: no reveal key, so no toggle.
+  |=  [name=@tas item=band-item:urui]
+  ^-  band:urui
+  [name [key=~ open=& label=''] item]
+::
+++  hideable
+  ::  A band the user can hide, persisted under `key`.
+  |=  [name=@tas key=@t open=? label=@t item=band-item:urui]
+  ^-  band:urui
+  [name [`key open label] item]
+::
+++  reference-pane
+  ::  Read-only, heading above a seeded strip: the other ordering from
+  ::  the editor pane below, and the branch with no status line.
+  ^-  pane:urui
   :*  role=%reference
       id='probe-reference'
       label='Probe reference'
-      heading=`'Files'
-      status-id=~
+      mode=%read-only
       kind=~
-      strip=&
-      controls=~
-      body=~[;div#probe-tree.tree;]
-      secondary=~
+      :~  (pinned %head [%heading `'Files' ~ ~])
+          (pinned %tabs [%tabs ~[reference-level]])
+          %+  pinned  %body
+          [%panel 'probe-reference-body' ~ ~[;div#probe-tree.tree;]]
+      ==
   ==
 ::
-++  editor-area
-  ::  status, no heading, no tab strip: the other branch of each test
-  ^-  area:urui
+++  reference-level
+  ::  %fixed in the compact spec; ++full-spec swaps it for %views, which
+  ::  is the one difference that picks the explorer frame.
+  ^-  tab-level:urui
+  :*  name=%view
+      label='Probe views'
+      source=%fixed
+      kind=~
+      fixed=~[[%text-files 'Text Files'] [%note-files 'Note Files']]
+      add=~
+      close=|
+      reorder=|
+  ==
+::
+++  editor-pane
+  ::  Heading *below* the tabs, a hidden controls band, and a status
+  ::  line: the three branches the reference pane does not take.
+  ^-  pane:urui
   :*  role=%editor
       id='probe-editor'
       label='Probe editor'
-      heading=~
-      status-id=`'probe-status'
+      mode=%read-write
       kind=`%text
-      strip=|
-      controls=~[;button#probe-save(type "button"):"Save"]
-      body=~[;div#probe-source.source;]
-      secondary=~
+      :~  (pinned %tabs [%tabs ~[editor-level]])
+          (pinned %head [%heading `'Source' `'probe-status' editor-actions])
+          %:  hideable
+            %extra
+            'probeExtra'
+            open=|
+            label='Probe extra controls'
+            [%controls ~[;button#probe-extra(type "button"):"Extra"]]
+          ==
+          (pinned %body [%panel 'probe-source' ~ ~[;div#probe-source.source;]])
+      ==
   ==
 ::
-++  result-area
-  ^-  area:urui
+++  editor-actions
+  ^-  marl
+  :~  ;button#probe-save(type "button"):"Save"
+  ==
+::
+++  editor-level
+  ^-  tab-level:urui
+  :*  name=%doc
+      label='Open Text documents'
+      source=%documents
+      kind=`%text
+      fixed=~
+      add=`'Add empty Text tab'
+      close=&
+      reorder=&
+  ==
+::
+++  result-pane
+  ^-  pane:urui
   :*  role=%result
       id='probe-result'
       label='Probe result'
-      heading=`'Result'
-      status-id=~
-      kind=~
-      strip=&
-      controls=~
-      body=~[;pre#probe-output.output;]
-      secondary=`secondary-editor
+      mode=%read-write
+      kind=`%note
+      :~  (pinned %head [%heading `'Result' ~ ~])
+          (pinned %tabs [%tabs ~[result-level]])
+          %+  pinned  %body
+          [%panel 'probe-output' `secondary-editor ~[;pre#probe-report.output;]]
+      ==
+  ==
+::
+++  result-level
+  ^-  tab-level:urui
+  :*  name=%note
+      label='Open Note documents'
+      source=%documents
+      kind=`%note
+      fixed=~
+      add=~
+      close=|
+      reorder=|
   ==
 ::
 ++  secondary-editor
@@ -80,7 +143,7 @@
   :*  config
       brand=~[;h1.brand:"Probe"]
       toolbar=~[;button#probe-run(type "button"):"Run"]
-      [reference-area editor-area result-area]
+      [reference-pane editor-pane result-pane]
       help=~[;p.probe-help:"nothing to see"]
       dialogs=~[;div#probe-dialog.dialog;]
       styles=~['/probe/app.css']
@@ -114,23 +177,41 @@
               refs=&
           ==
       ==
-    statuses         ~[[%ready 'Ready'] [%busy 'Busy'] [%empty 'Empty']]
-    permanent-views  ~[[%text-files 'Text Files'] [%note-files 'Note Files']]
+    statuses  ~[[%ready 'Ready'] [%busy 'Busy'] [%empty 'Empty']]
   ==
 ::
 ++  full-spec
+  ::  The same three panes with the reference level switched to %views:
+  ::  ++build reads that one field to choose the explorer frame.
   ^-  shell-spec:urui
-  =/  full-editor=area:urui
-    %*  .  editor-area
-      strip  &
-      body
-        :~  ;p#editor-load-error(hidden "", role "alert");
-            ;div#probe-source.source;
+  =/  full-reference=pane:urui
+    %*  .  reference-pane
+      bands
+        :~  (pinned %tabs [%tabs ~[%*(. reference-level source %views)]])
+            (pinned %ship [%label 'probe-ship'])
+            %+  pinned  %body
+            [%panel 'probe-reference-body' ~ ~[;div#probe-tree.tree;]]
         ==
     ==
-  =/  full-result=area:urui
-    %*  .  result-area
-      kind  `%note
+  =/  full-editor=pane:urui
+    %*  .  editor-pane
+      bands
+        :~  (pinned %tabs [%tabs ~[editor-level]])
+            (pinned %head [%heading `'Source' `'probe-status' editor-actions])
+            %:  hideable
+              %extra
+              'probeExtra'
+              open=|
+              label='Probe extra controls'
+              [%controls ~[;button#probe-extra(type "button"):"Extra"]]
+            ==
+            %+  pinned  %body
+            :*  %panel  'probe-source'  ~
+                :~  ;p#editor-load-error(hidden "", role "alert");
+                    ;div#probe-source.source;
+                ==
+            ==
+        ==
     ==
   =/  fixture-toolbar=marl
     :~  ;nav.toolbar(aria-label "Fixture controls")
@@ -160,10 +241,7 @@
   :*  full-config
       brand=~[;h1.brand:"Probe"]
       fixture-toolbar
-      :*  reference-area
-          full-editor
-          full-result
-      ==
+      [full-reference full-editor result-pane]
       fixture-help
       dialogs=~[;div#probe-dialog.dialog;]
       styles=~['body { color: black; }']
@@ -229,12 +307,22 @@
   ?=(^ (node-by-id top id))
 ::
 ++  panes
-  ::  The three area sections, in document order.
+  ::  The three pane sections of the compact frame, in document order.
   ^-  (list manx)
   =/  shells  (elements doc %main)
   ?~  shells  ~
   %+  skim  c.i.shells
   |=(=manx =(%section n.g.manx))
+::
+++  bands-of
+  ::  Every band wrapper inside one pane, in document order.
+  ::
+  ::  `top`, not `=manx`, for the reason ++text-of gives: a face of that
+  ::  name shadows the mold the inner gate's sample needs.
+  |=  top=manx
+  ^-  (list manx)
+  %+  skim  c.top
+  |=(kid=manx ?=(^ (find "pane-band" (attribute kid %class))))
 ::
 ++  text-of
   ::  The concatenated text of an element's immediate children.
@@ -255,7 +343,7 @@
   ::  Shared page contract, exercised through the fixture-shaped spec.
   =/  ids=(list tape)
     :~  "probe-reference"
-        "explorer-tabs"
+        "probe-reference-view-tabs"
         "explorer-collapse"
         "text-files-tab"
         "note-files-tab"
@@ -266,8 +354,8 @@
         "splitter"
         "probe-editor"
         "probe-result"
-        "text-document-tabs"
-        "note-document-tabs"
+        "probe-editor-doc-tabs"
+        "probe-result-note-tabs"
         "probe-secondary"
         "editor-load-error"
         "theme"
@@ -314,74 +402,163 @@
     (expect-eq !>("probe-result") !>((attribute (snag 2 found) %id)))
   ==
 ::
-++  test-shell-pane-carries-role-label-and-data-role
+++  test-shell-pane-carries-role-label-and-mode
   =/  found  panes
   =/  first  (snag 0 found)
   ;:  weld
     (expect-eq !>("region") !>((attribute first %role)))
     (expect-eq !>("Probe reference") !>((attribute first %aria-label)))
     (expect-eq !>("reference") !>((attribute first %data-role)))
+    (expect-eq !>("read-only") !>((attribute first %data-mode)))
+    (expect-eq !>("pane reference-pane") !>((attribute first %class)))
     (expect-eq !>("editor") !>((attribute (snag 1 found) %data-role)))
+    (expect-eq !>("read-write") !>((attribute (snag 1 found) %data-mode)))
+    (expect-eq !>("pane editor-pane") !>((attribute (snag 1 found) %class)))
     (expect-eq !>("result") !>((attribute (snag 2 found) %data-role)))
+    (expect-eq !>("pane preview-pane") !>((attribute (snag 2 found) %class)))
   ==
 ::
-++  test-shell-heading-appears-only-when-supplied
+++  test-shell-stacks-bands-in-declared-order
+  ::  Band order is the layout: the reference pane's heading is above its
+  ::  tabs and the editor pane's is below, from the same two items.
   =/  found  panes
-  =/  titled  (elements (snag 0 found) %h2)
+  =/  names
+    |=  top=manx
+    ^-  (list tape)
+    %+  turn  (bands-of top)
+    |=(kid=manx (attribute kid %data-band))
+  =/  ids
+    |=  top=manx
+    ^-  (list tape)
+    %+  turn  (bands-of top)
+    |=(kid=manx (attribute kid %id))
+  ::  every band wrapper is `{pane}-{band}`
+  =/  wanted=(list tape)
+    :~  "probe-reference-head"
+        "probe-reference-tabs"
+        "probe-reference-body"
+    ==
   ;:  weld
+    (expect-eq !>(~["head" "tabs" "body"]) !>((names (snag 0 found))))
+    (expect-eq !>(~["tabs" "head" "extra" "body"]) !>((names (snag 1 found))))
+    (expect-eq !>(~["head" "tabs" "body"]) !>((names (snag 2 found))))
+    (expect-eq !>(wanted) !>((ids (snag 0 found))))
+  ==
+::
+++  test-shell-heading-band-carries-title-status-and-actions
+  =/  found  panes
+  =/  editor  (snag 1 found)
+  =/  header
+    %-  head
+    %+  skim  (bands-of editor)
+    |=(kid=manx =("tabs" (attribute kid %data-band)))
+  =/  head-band
+    %-  head
+    %+  skim  (bands-of editor)
+    |=(kid=manx =("head" (attribute kid %data-band)))
+  =/  titled  (elements head-band %h2)
+  =/  status  (elements head-band %span)
+  =/  actions
+    %+  skim  (elements head-band %div)
+    |=(kid=manx =("pane-actions" (attribute kid %class)))
+  ;:  weld
+    (expect-eq !>("pane-band pane-header") !>((attribute head-band %class)))
     (expect-eq !>(1) !>((lent titled)))
-    (expect-eq !>("Files") !>((text-of (snag 0 titled))))
-    (expect-eq !>(0) !>((lent (elements (snag 1 found) %h2))))
-  ==
-::
-++  test-shell-status-appears-only-when-supplied
-  =/  found  panes
-  =/  status  (elements (snag 1 found) %span)
-  ;:  weld
+    (expect-eq !>("Source") !>((text-of (snag 0 titled))))
+    ::  an editor pane's title is what its Ace host labels itself by
+    (expect-eq !>("text-source-heading") !>((attribute (snag 0 titled) %id)))
     (expect-eq !>(1) !>((lent status)))
     (expect-eq !>("probe-status") !>((attribute (snag 0 status) %id)))
     (expect-eq !>("status") !>((attribute (snag 0 status) %role)))
-    (expect-eq !>(0) !>((lent (elements (snag 0 found) %span))))
+    (expect-eq !>(1) !>((lent actions)))
+    %-  expect-eq
+    :-  !>("probe-save")
+    !>((attribute (head (elements (head actions) %button)) %id))
+    ::  the tabs band above it carries no heading of its own
+    (expect-eq !>(0) !>((lent (elements header %h2))))
   ==
 ::
-++  test-shell-tab-strip-follows-the-area-flag
+++  test-shell-heading-without-actions-emits-no-action-row
+  =/  found  panes
+  =/  head-band
+    %-  head
+    %+  skim  (bands-of (snag 0 found))
+    |=(kid=manx =("head" (attribute kid %data-band)))
+  ::  ++elements counts the band wrapper itself, so an empty heading band
+  ::  is one div: the wrapper, with no action row inside it
+  =/  inside  (elements head-band %div)
+  ;:  weld
+    (expect-eq !>(1) !>((lent (elements head-band %h2))))
+    (expect-eq !>(0) !>((lent (elements head-band %span))))
+    (expect-eq !>(1) !>((lent inside)))
+    (expect-eq !>("pane-band pane-header") !>((attribute (head inside) %class)))
+  ==
+::
+++  test-shell-reveal-emits-a-toggle-and-hides-a-closed-band
+  ::  A band with a reveal key gets `{pane}-{band}-toggle` as its
+  ::  *sibling*, so hiding the band cannot hide its own control.
+  =/  found  panes
+  =/  editor  (snag 1 found)
+  =/  extra
+    %-  head
+    %+  skim  (bands-of editor)
+    |=(kid=manx =("extra" (attribute kid %data-band)))
+  =/  toggles
+    %+  skim  (elements editor %button)
+    |=(kid=manx =("probe-editor-extra-toggle" (attribute kid %id)))
+  =/  toggle  (head toggles)
+  ;:  weld
+    (expect-eq !>(1) !>((lent toggles)))
+    (expect-eq !>("probe-editor-extra") !>((attribute toggle %aria-controls)))
+    (expect-eq !>("false") !>((attribute toggle %aria-expanded)))
+    (expect-eq !>("Probe extra controls") !>((attribute toggle %title)))
+    (expect !>((has-attribute extra %hidden)))
+    ::  and a pinned band has neither toggle nor hidden flag
+    (expect-eq !>(%.n) !>((has-attribute (head (bands-of editor)) %hidden)))
+  ==
+::
+++  test-shell-tab-strip-is-one-per-pane-at-depth-zero
   =/  found  panes
   =/  strips
-    %+  turn  found
-    |=  pane=manx
-    ^-  @ud
-    %-  lent
-    %+  skim  (elements pane %div)
-    |=(kid=manx =("tab-strip" (attribute kid %class)))
-  =/  first-strip=manx
-    %-  head
-    %+  skim  (elements (snag 0 found) %div)
-    |=(kid=manx =("tab-strip" (attribute kid %class)))
+    |=  top=manx
+    ^-  (list manx)
+    %+  skim  (elements top %div)
+    |=(kid=manx ?=(^ (find "tab-strip" (attribute kid %class))))
+  =/  counts  (turn found |=(top=manx (lent (strips top))))
+  =/  first  (head (strips (snag 0 found)))
   ;:  weld
-    (expect-eq !>(~[1 0 1]) !>(strips))
-    ::  the strip is named after its area, so two areas cannot collide
-    (expect-eq !>("probe-reference-tabs") !>((attribute first-strip %id)))
-    (expect-eq !>("tablist") !>((attribute first-strip %role)))
+    (expect-eq !>(~[1 1 1]) !>(counts))
+    ::  the strip is named for its pane and its level, so no two collide
+    (expect-eq !>("probe-reference-view-tabs") !>((attribute first %id)))
+    (expect-eq !>("tablist") !>((attribute first %role)))
+    (expect-eq !>("0") !>((attribute first %data-depth)))
+    (expect-eq !>("fixed") !>((attribute first %data-source)))
+    (expect-eq !>("Probe views") !>((attribute first %aria-label)))
+    %-  expect-eq
+    :-  !>("documents")
+    !>((attribute (head (strips (snag 1 found))) %data-source))
   ==
 ::
-++  test-shell-hosts-the-secondary-editor-in-its-own-area
+++  test-shell-panel-band-hosts-the-ace-editor
   =/  found  panes
   =/  hosts
-    %+  turn  found
-    |=  pane=manx
-    ^-  @ud
-    %-  lent
-    %+  skim  (elements pane %div)
+    |=  top=manx
+    ^-  (list manx)
+    %+  skim  (elements top %div)
     |=(kid=manx =("editor-host" (attribute kid %class)))
-  =/  host
+  =/  counts  (turn found |=(top=manx (lent (hosts top))))
+  =/  host  (head (hosts (snag 2 found)))
+  =/  body
     %-  head
     %+  skim  (elements (snag 2 found) %div)
-    |=(kid=manx =("editor-host" (attribute kid %class)))
+    |=(kid=manx =("pane-body" (attribute kid %class)))
   ;:  weld
-    (expect-eq !>(~[0 0 1]) !>(hosts))
+    (expect-eq !>(~[0 0 1]) !>(counts))
     (expect-eq !>("probe-secondary") !>((attribute host %id)))
     (expect-eq !>("Probe secondary") !>((attribute host %aria-label)))
     (expect-eq !>("ace/mode/text") !>((attribute host %data-mode)))
+    ::  the panel's own id is the one a consumer addresses it by
+    (expect-eq !>("probe-output") !>((attribute body %id)))
   ==
 ::
 ++  test-shell-splices-consumer-body-and-controls
@@ -392,11 +569,27 @@
   ::  ++elements counts the pane body itself, so the consumer's own div is
   ::  the second hit: it is inside the body, not beside it
   =/  inside=(list manx)  (elements (head bodies) %div)
-  =/  control=manx  (head (elements (snag 1 found) %button))
+  =/  extra
+    %-  head
+    %+  skim  (bands-of (snag 1 found))
+    |=(kid=manx =("extra" (attribute kid %data-band)))
   ;:  weld
     (expect-eq !>(2) !>((lent inside)))
     (expect-eq !>("probe-source") !>((attribute (snag 1 inside) %id)))
-    (expect-eq !>("probe-save") !>((attribute control %id)))
+    ::  a %controls band is the row itself: its marl is spliced bare
+    (expect-eq !>(1) !>((lent (elements extra %button))))
+    %-  expect-eq
+    :-  !>("probe-extra")
+    !>((attribute (head (elements extra %button)) %id))
+  ==
+::
+++  test-shell-label-band-emits-one-line-of-text
+  =/  labels
+    %+  skim  (elements full-doc %span)
+    |=(kid=manx =("pane-label" (attribute kid %class)))
+  ;:  weld
+    (expect-eq !>(1) !>((lent labels)))
+    (expect-eq !>("probe-ship") !>((text-of (head labels))))
   ==
 ::
 ++  test-shell-emits-scripts-in-list-order
@@ -444,6 +637,23 @@
     (expect-eq !>("probe-dialog") !>((attribute (snag 1 inside) %id)))
   ==
 ::
+++  test-full-shell-is-chosen-by-the-views-level
+  ::  The only difference between the two specs is `source=%views` on the
+  ::  reference level, and that is what swaps the section for an aside.
+  =/  compact-asides
+    %+  skim  (elements doc %aside)
+    |=(kid=manx =("probe-reference" (attribute kid %id)))
+  =/  full-asides
+    %+  skim  (elements full-doc %aside)
+    |=(kid=manx =("probe-reference" (attribute kid %id)))
+  ;:  weld
+    (expect-eq !>(0) !>((lent compact-asides)))
+    (expect-eq !>(1) !>((lent full-asides)))
+    %-  expect-eq
+    :-  !>("explorer-pane")
+    !>((attribute (head full-asides) %class))
+  ==
+::
 ++  test-full-shell-emits-explorer-regions
   =/  asides  (elements full-doc %aside)
   =/  tabs  (elements full-doc %button)
@@ -471,16 +681,22 @@
     (expect-eq !>("splitter") !>((attribute (snag 1 separators) %id)))
   ==
 ::
-++  test-full-shell-emits-document-tab-strips
+++  test-full-shell-emits-one-strip-per-pane
   =/  strips
     %+  skim  (elements full-doc %div)
-    |=(kid=manx =("document-tabs" (attribute kid %class)))
-  =/  first-id  (attribute (snag 0 strips) %id)
-  =/  second-id  (attribute (snag 1 strips) %id)
+    |=(kid=manx ?=(^ (find "tab-strip" (attribute kid %class))))
+  =/  explorer
+    %+  skim  (elements full-doc %div)
+    |=(kid=manx =("explorer-tabs" (attribute kid %class)))
   ;:  weld
+    ::  two document strips; the explorer's carries its own class
     (expect-eq !>(2) !>((lent strips)))
-    (expect-eq !>("text-document-tabs") !>(first-id))
-    (expect-eq !>("note-document-tabs") !>(second-id))
+    (expect-eq !>("probe-editor-doc-tabs") !>((attribute (snag 0 strips) %id)))
+    (expect-eq !>("probe-result-note-tabs") !>((attribute (snag 1 strips) %id)))
+    (expect-eq !>(1) !>((lent explorer)))
+    %-  expect-eq
+    :-  !>("probe-reference-view-tabs")
+    !>((attribute (head explorer) %id))
   ==
 ::
 ++  test-full-shell-emits-help-and-dialogs
