@@ -6,7 +6,7 @@
 ::  present, and so a contract change that only a real consumer would
 ::  notice fails here first.
 ::
-::  Two document kinds, three areas, five chords, and one endpoint set —
+::  Two document kinds, three panes, five chords, and one endpoint set —
 ::  the shapes graph-viz uses, with none of its vocabulary.
 ::
 /-  urui
@@ -70,9 +70,6 @@
       ==
       docs-root=`'/docs/d/urui-fixture/'
       share-param=`[name='text' max=12.288 param-max=16.384]
-      :~  [%text-files 'Text Files']
-          [%note-files 'Note Files']
-      ==
       :*  base='/apps/urui-fixture/ace'
           global='uruiFixtureAceAssets'
           version='1.44.0'
@@ -129,7 +126,7 @@
   :*  config
       brand
       toolbar
-      [reference-area editor-area result-area]
+      [reference-pane editor-pane result-pane]
       help
       dialogs=~
       styles=~['/apps/urui-fixture/app.css']
@@ -171,32 +168,61 @@
       ==
   ==
 ::
-++  reference-area
-  ^-  area:urui
+++  pinned
+  |=  [name=@tas item=band-item:urui]
+  ^-  band:urui
+  [name [key=~ open=& label=''] item]
+::
+++  reference-pane
+  ^-  pane:urui
   :*  role=%reference
       id='explorer'
       label='Fixture explorer'
-      heading=`'Files'
-      status-id=~
+      mode=%read-only
       kind=~
-      strip=&
-      controls=~
-      body=~[;div#explorer-panels.explorer-panels;]
-      secondary=~
+      :~  (pinned %tabs [%tabs ~[reference-level]])
+          (pinned %body [%panel 'explorer-body' ~ ~])
+      ==
   ==
 ::
-++  editor-area
-  ^-  area:urui
+++  reference-level
+  ^-  tab-level:urui
+  :*  name=%view
+      label='Fixture explorer'
+      source=%views
+      kind=~
+      :~  [%text-files 'Text Files']
+          [%note-files 'Note Files']
+      ==
+      add=~
+      close=|
+      reorder=&
+  ==
+::
+++  editor-pane
+  ^-  pane:urui
   :*  role=%editor
       id='editor-pane'
       label='Fixture editor'
-      heading=`'Source'
-      status-id=`'source-status'
+      mode=%read-write
       kind=`%text
-      strip=&
-      controls=editor-controls
-      body=~[editor-host]
-      secondary=~
+      :~  (pinned %head [%heading `'Source' `'source-status' ~])
+          (pinned %controls [%controls editor-controls])
+          (pinned %tabs [%tabs ~[editor-level]])
+          (pinned %body [%panel 'editor-body' ~ ~[editor-host]])
+      ==
+  ==
+::
+++  editor-level
+  ^-  tab-level:urui
+  :*  name=%document
+      label='Text documents'
+      source=%documents
+      kind=`%text
+      fixed=~
+      add=`'Add empty Text tab'
+      close=&
+      reorder=&
   ==
 ::
 ++  editor-controls
@@ -204,7 +230,7 @@
   ::  expects: `#browse-text`, `#load-text`, `#save-text`.
   ::
   ::  A `marl` literal is cast here rather than inline: an uncast list of
-  ::  Sail elements carries each element's own type into the area's mold,
+  ::  Sail elements carries each element's own type into the pane's mold,
   ::  and the nest check that follows is slow enough to notice.
   ^-  marl
   :~  ;button#add-text-ref(type "button", disabled ""):"Add Ref"
@@ -224,20 +250,33 @@
     ;span(hidden "");
   ==
 ::
-++  result-area
-  ^-  area:urui
-  ::  Area 3 has no default: the fixture supplies a <pre>, exactly as a
+++  result-pane
+  ^-  pane:urui
+  ::  Pane 3 has no default: the fixture supplies a <pre>, exactly as a
   ::  real consumer supplies its preview, grid, or report.
   :*  role=%result
       id='result-pane'
       label='Fixture result'
-      heading=`'Result'
-      status-id=`'result-status'
+      mode=%read-write
       kind=`%note
-      strip=&
-      controls=result-controls
-      body=result-body
-      secondary=`secondary-editor
+      :~  (pinned %head [%heading `'Result' `'result-status' ~])
+          (pinned %controls [%controls result-controls])
+          (pinned %tabs [%tabs ~[result-level]])
+          %+  pinned  %body
+          [%panel 'result-body' `secondary-editor result-body]
+      ==
+  ==
+::
+++  result-level
+  ^-  tab-level:urui
+  :*  name=%document
+      label='Note documents'
+      source=%documents
+      kind=`%note
+      fixed=~
+      add=`'Add empty Note tab'
+      close=&
+      reorder=&
   ==
 ::
 ++  result-controls
@@ -299,7 +338,7 @@
 ++  javascript
   ^-  @t
   %+  rap  3
-  :~  (emit:ucfg config)
+  :~  (emit:ucfg spec)
       core:ujs
       mode-js
       app-js
@@ -313,7 +352,7 @@
   (config-js:uace ace-spec.app)
 ::
 ++  app-css
-  ::  The fixture's own rules: enough to see the result area.
+  ::  The fixture's own rules: enough to see the result pane.
   ^-  @t
   '''
   .preview-pane { flex-direction: column; }
