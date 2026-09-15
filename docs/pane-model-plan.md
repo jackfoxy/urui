@@ -322,7 +322,7 @@ Done: `tabHooks(...).add` no longer exists; `renderTabs` no longer
 assumes one strip.
 Scope: L — 2 days.
 
-#### W9.5 — CSS for bands and depth
+#### W9.5 — CSS for bands and depth (done 2026-09-15)
 
 Files: `desk/lib/urui-css.hoon`.
 Change: `++tabs` gains `.tab-strip[data-depth="0|1|2"]` sizing (depth 0
