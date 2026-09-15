@@ -99,6 +99,8 @@
       ['nextDocs' %urui %next ~]
       ['refTabs' %urui %tabs ~]
       ['nextRef' %urui %next ~]
+      ['paneBands' %urui %record ~]
+      ['panePaths' %urui %record ~]
       ['textTabs' %urui %tabs `%text]
       ['activeTextTabId' %urui %active `%text]
       ['nextTextTab' %urui %next `%text]
@@ -169,9 +171,16 @@
   ==
 ::
 ++  pinned
+  ::  A band the user cannot hide: no reveal key, so no toggle.
   |=  [name=@tas item=band-item:urui]
   ^-  band:urui
   [name [key=~ open=& label=''] item]
+::
+++  hideable
+  ::  A band the user can hide, persisted under `key`.
+  |=  [name=@tas key=@t open=? label=@t item=band-item:urui]
+  ^-  band:urui
+  [name [`key open label] item]
 ::
 ++  reference-pane
   ^-  pane:urui
@@ -207,7 +216,15 @@
       mode=%read-write
       kind=`%text
       :~  (pinned %head [%heading `'Source' `'source-status' ~])
-          (pinned %controls [%controls editor-controls])
+          ::  open by default: the file controls are what the browser
+          ::  specs click, and the reveal round-trip closes them
+          %:  hideable
+            %controls
+            'editorControls'
+            open=&
+            label='File controls'
+            [%controls editor-controls]
+          ==
           (pinned %tabs [%tabs ~[editor-level]])
           (pinned %body [%panel 'editor-body' ~ ~[editor-host]])
       ==
@@ -261,22 +278,52 @@
       kind=`%note
       :~  (pinned %head [%heading `'Result' `'result-status' ~])
           (pinned %controls [%controls result-controls])
-          (pinned %tabs [%tabs ~[result-level]])
+          (pinned %tabs [%tabs ~[result-level view-level set-level]])
           %+  pinned  %body
           [%panel 'result-body' `secondary-editor result-body]
       ==
   ==
 ::
 ++  result-level
+  ::  No `+`: the note store is filled by echoing a text tab, so its
+  ::  strip is the branch of ++renderTabs that draws no add control.
   ^-  tab-level:urui
   :*  name=%document
       label='Note documents'
       source=%documents
       kind=`%note
       fixed=~
-      add=`'Add empty Note tab'
+      add=~
       close=&
       reorder=&
+  ==
+::
+++  view-level
+  ::  Depth 1: two fixed views of whatever note tab is selected.
+  ^-  tab-level:urui
+  :*  name=%view
+      label='Note views'
+      source=%fixed
+      kind=~
+      :~  [%rendered 'Rendered']
+          [%messages 'Messages']
+      ==
+      add=~
+      close=|
+      reorder=|
+  ==
+::
+++  set-level
+  ::  Depth 2: filled by the fixture through `runtime.panes.set`.
+  ^-  tab-level:urui
+  :*  name=%set
+      label='Note sections'
+      source=%dynamic
+      kind=~
+      fixed=~
+      add=~
+      close=&
+      reorder=|
   ==
 ::
 ++  result-controls
@@ -510,7 +557,6 @@
     },
     tabs: {
       text: {
-        add: 'Add empty Text tab',
         validate: (candidate, base) => ({
           selection: candidate.selection || {start: 0, end: 0}
         }),
@@ -737,6 +783,13 @@
     editor: {
       primary: () => editor,
       secondary: () => noteEditor
+    },
+    panes: {
+      get: fixtureHook('panes', 'get', 'got'),
+      set: fixtureHook('panes', 'set', 'set'),
+      select: fixtureHook('panes', 'select', 'selected'),
+      panel: fixtureHook('panes', 'panel', 'paneled'),
+      reveal: fixtureHook('panes', 'reveal', 'revealed')
     },
     explorer: {
       show: fixtureHook('explorer', 'show', 'shown'),

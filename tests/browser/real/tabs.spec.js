@@ -49,8 +49,17 @@ async function installRoutes(page, state) {
   });
 }
 
+//  a kind's strip is the one its %documents level declared, and the
+//  fixture puts the text kind in the editor pane and the note kind in
+//  the result pane
+const stripFor = (kind) => {
+  return kind === 'text'
+    ? '#editor-pane-document-tabs'
+    : '#result-pane-document-tabs';
+};
+
 function tabControl(page, kind, label) {
-  return page.locator(`#${kind}-document-tabs .document-tab-control`)
+  return page.locator(`${stripFor(kind)} .document-tab-control`)
     .filter({has: page.getByRole('tab', {name: label, exact: true})});
 }
 
@@ -82,20 +91,20 @@ test('Text tabs focus, render conditionally, save, and guard close', async ({
   await expect(page.locator('#close-text-files')).toHaveCount(0);
   await expect(page.locator('#close-note-files')).toHaveCount(0);
   const initialTabCount = await page.locator(
-    '#text-document-tabs [role="tab"]'
+    '#editor-pane-document-tabs [role="tab"]'
   ).count();
   await page.getByRole('button', {name: 'Add empty Text tab'}).click();
-  await expect(page.locator('#text-document-tabs [role="tab"]'))
+  await expect(page.locator('#editor-pane-document-tabs [role="tab"]'))
     .toHaveCount(initialTabCount + 1);
   await expect.poll(() => page.evaluate(() => {
     return window.__URUI_EDITOR_TEST__.getSource();
   })).toBe('');
   const addedTab = page.locator(
-    '#text-document-tabs [role="tab"][aria-selected="true"]'
+    '#editor-pane-document-tabs [role="tab"][aria-selected="true"]'
   );
   await expect(addedTab).toHaveText('Untitled');
   await addedTab.locator('..').locator('.document-tab-close').click();
-  await expect(page.locator('#text-document-tabs [role="tab"]'))
+  await expect(page.locator('#editor-pane-document-tabs [role="tab"]'))
     .toHaveCount(initialTabCount);
 
   await page.locator('[data-path="left/txt"]').click();
@@ -167,9 +176,9 @@ test('tab strips show thin horizontal scrollbars only on overflow', async ({
   await page.goto('/apps/urui-fixture/');
   const metrics = await page.evaluate(() => {
     const selectors = [
-      '#explorer-tabs',
-      '#text-document-tabs',
-      '#note-document-tabs'
+      '#explorer-view-tabs',
+      '#editor-pane-document-tabs',
+      '#result-pane-document-tabs'
     ];
     return selectors.map((selector) => {
       const strip = document.querySelector(selector);
@@ -225,7 +234,7 @@ test('Add Ref creates persistent, synced, read-only Text and Note tabs', async (
   await expect(addDotRef).toBeEnabled();
   await addDotRef.click();
   await expect(addDotRef).toBeDisabled();
-  const dotRef = page.locator('#explorer-tabs .ref-tab').filter({
+  const dotRef = page.locator('#explorer-view-tabs .ref-tab').filter({
     hasText: 'Untitled'
   });
   await expect(dotRef).toHaveAttribute('aria-selected', 'true');
@@ -277,14 +286,15 @@ test('tabs stay draggable; only an available Ref drops on the explorer',
   const dotTab = tabControl(page, 'text', 'Untitled');
   await expect.poll(() => dotTab.evaluate((node) => node.draggable))
     .toBe(true);
-  await dotTab.dragTo(page.locator('#explorer-tabs'));
-  await expect(page.locator('#explorer-tabs .ref-tab')).toHaveText('Untitled');
+  await dotTab.dragTo(page.locator('#explorer-view-tabs'));
+  await expect(page.locator('#explorer-view-tabs .ref-tab'))
+    .toHaveText('Untitled');
   await expect(page.locator('#add-text-ref')).toBeDisabled();
 
   await expect.poll(() => dotTab.evaluate((node) => node.draggable))
     .toBe(true);
-  await dotTab.dragTo(page.locator('#explorer-tabs'));
-  await expect(page.locator('#explorer-tabs .ref-tab')).toHaveCount(1);
+  await dotTab.dragTo(page.locator('#explorer-view-tabs'));
+  await expect(page.locator('#explorer-view-tabs .ref-tab')).toHaveCount(1);
 
   await page.getByRole('button', {name: 'Add empty Text tab'}).click();
   const emptyTab = tabControl(page, 'text', 'Untitled').last();
@@ -292,7 +302,7 @@ test('tabs stay draggable; only an available Ref drops on the explorer',
   await expect.poll(() => emptyTab.evaluate((node) => node.draggable))
     .toBe(true);
   await emptyTab.dragTo(page.locator('#explorer'));
-  await expect(page.locator('#explorer-tabs .ref-tab')).toHaveCount(1);
+  await expect(page.locator('#explorer-view-tabs .ref-tab')).toHaveCount(1);
 
   await dotTab.first().locator('.document-tab').click();
   await expect(page.locator('#add-note-ref')).toBeDisabled();
@@ -302,7 +312,7 @@ test('tabs stay draggable; only an available Ref drops on the explorer',
   await expect.poll(() => svgTab.evaluate((node) => node.draggable))
     .toBe(true);
   await svgTab.dragTo(page.locator('#explorer'));
-  await expect(page.locator('#explorer-tabs .ref-tab'))
+  await expect(page.locator('#explorer-view-tabs .ref-tab'))
     .toHaveCount(2);
   await expect(page.locator('#add-note-ref')).toBeDisabled();
 });
@@ -357,7 +367,7 @@ test('Text, Note, and explorer tab order and content persist', async ({page}) =>
   await expect(page.getByRole('tab', {name: 'Users Guide'})
     .locator('..').locator('.docs-tab-close')).toHaveText('X');
   const tabHeights = await page.evaluate(() => {
-    const explorerTabs = document.querySelector('#explorer-tabs');
+    const explorerTabs = document.querySelector('#explorer-view-tabs');
     const referenceTab = document.querySelector('.docs-tab');
     const referenceControl = referenceTab.parentElement;
     const labelRange = document.createRange();
@@ -372,12 +382,12 @@ test('Text, Note, and explorer tab order and content persist', async ({page}) =>
     return {
       explorer: explorerTabs.getBoundingClientRect().height,
       explorerOverflow: explorerTabs.scrollWidth > explorerTabs.clientWidth,
-      documents: document.querySelector('#text-document-tabs')
+      documents: document.querySelector('#editor-pane-document-tabs')
         .getBoundingClientRect().height,
       reference: document.querySelector('.docs-tab-control')
         .getBoundingClientRect().height,
       editor: document.querySelector(
-        '#text-document-tabs .document-tab-control'
+        '#editor-pane-document-tabs .document-tab-control'
       ).getBoundingClientRect().height,
       labelCenter: labelBounds.left + labelBounds.width / 2,
       controlCenter: controlBounds.left + controlBounds.width / 2,
@@ -418,21 +428,21 @@ test('Text, Note, and explorer tab order and content persist', async ({page}) =>
   await page.getByRole('tab', {name: 'preview.note'}).click();
   await page.waitForTimeout(250);
 
-  const dotOrder = await page.locator('#text-document-tabs .document-tab')
-    .allTextContents();
-  const svgOrder = await page.locator('#note-document-tabs .document-tab')
-    .allTextContents();
-  const explorerOrder = await page.locator('#explorer-tabs [role="tab"]')
+  const dotOrder = await page
+    .locator('#editor-pane-document-tabs .document-tab').allTextContents();
+  const svgOrder = await page
+    .locator('#result-pane-document-tabs .document-tab').allTextContents();
+  const explorerOrder = await page.locator('#explorer-view-tabs [role="tab"]')
     .allTextContents();
   await page.reload();
 
   await expect(page.getByRole('tab', {name: 'menu.text'}))
     .toHaveAttribute('aria-selected', 'true');
-  expect(await page.locator('#text-document-tabs .document-tab')
+  expect(await page.locator('#editor-pane-document-tabs .document-tab')
     .allTextContents()).toEqual(dotOrder);
-  expect(await page.locator('#note-document-tabs .document-tab')
+  expect(await page.locator('#result-pane-document-tabs .document-tab')
     .allTextContents()).toEqual(svgOrder);
-  expect(await page.locator('#explorer-tabs [role="tab"]')
+  expect(await page.locator('#explorer-view-tabs [role="tab"]')
     .allTextContents()).toEqual(explorerOrder);
   await expect(tabControl(page, 'text', 'menu.text')
     .locator('.document-tab-close')).toHaveText('O');

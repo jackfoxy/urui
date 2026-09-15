@@ -21,19 +21,22 @@ Line references to graph-viz are against its `dev` branch.
   not the Hoon field names, are what the browser and the tests bind to.
 - **Sail DOM** — `urui-shell.hoon` emits the frame and every id the runtime
   binds: `#workbench`, `#workspace`, `#splitter`, `#explorer-*`,
-  `{view}-tab`/`-panel`/`-tree`, `{kind}-document-tabs`, `#help-panel`,
-  `#clay-error-*`, `#file-context-*`. `data-role` locates the three panes.
+  `{view}-tab`/`-panel`/`-tree`, `{pane}-{band}` and its
+  `{pane}-{band}-toggle`, `{pane}-{level}-tabs`, `#help-panel`,
+  `#clay-error-*`, `#file-context-*`. `data-role` locates the three panes
+  and `data-mode` says whether one is read-only.
 - **`window.urui`** — the frozen facade: `config`, `boot(hooks)` (once
   only), `runtime(options)`, `editor.adapter(host, options)`, plus the
-  dispatch groups `tabs`, `explorer`, `session`, `files`, `shortcuts`,
-  `layout`, `problem`, `status`, `dialog`. **The groups implement
+  dispatch groups `tabs`, `explorer`, `panes`, `session`, `files`,
+  `shortcuts`, `layout`, `problem`, `status`, `dialog`. **The groups implement
   nothing** — they forward to the consumer's hook object. Only
   `dialog.confirm` and `dialog.prompt` carry fallbacks.
-- **`createRuntime(options)`** — the actual machinery: tab stores, explorer
-  views, docs and ref tabs, the Clay file tree, session persistence, Clay
-  requests, shortcut dispatch, theme, layout, and dialogs. It returns a
-  large **unfrozen, internal** object: `runtime.tabs`, `.theme`, `.layout`,
-  `.explorer`, `.session`, `.dialogs`, `.files`, `.shortcuts`, `.wire`.
+- **`createRuntime(options)`** — the actual machinery: tab stores, pane
+  bands and tab levels, explorer views, docs and ref tabs, the Clay file
+  tree, session persistence, Clay requests, shortcut dispatch, theme,
+  layout, and dialogs. It returns a large **unfrozen, internal** object:
+  `runtime.tabs`, `.panes`, `.theme`, `.layout`, `.explorer`, `.session`,
+  `.dialogs`, `.files`, `.shortcuts`, `.wire`.
 - **`createAceEditorAdapter(host, {assets, mode, platform, label, …})`** —
   an absolute-offset editor API. `setTheme`, `refresh`, and `isFocused` are
   the three the runtime itself calls.

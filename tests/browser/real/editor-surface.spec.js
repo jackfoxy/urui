@@ -214,7 +214,7 @@ test('explorer collapse toggles and persists', async ({page}) => {
   await expect(page.locator('#explorer')).toHaveClass(/collapsed/);
   await expect(page.locator('#workbench')).toHaveClass(/explorer-collapsed/);
   await expect(page.locator('#explorer-resizer')).toBeDisabled();
-  await expect(page.locator('#explorer-tabs')).toBeHidden();
+  await expect(page.locator('#explorer-view-tabs')).toBeHidden();
   await expect.poll(() => page.evaluate(() => {
     const saved = JSON.parse(localStorage.getItem('urui-fixture.session.v1'));
     return saved?.explorerOpen;

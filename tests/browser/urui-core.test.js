@@ -60,8 +60,11 @@ test('publishes and boots the stable API', () => {
   assert.equal(window.uruiFixture.ready, true);
   assert.equal(window.uruiFixture.api, urui);
   assert.deepEqual(Object.keys(urui), [
-    'config', 'boot', 'status', 'tabs', 'editor', 'explorer', 'dialog',
-    'session', 'files', 'shortcuts', 'layout', 'problem', 'runtime'
+    'config', 'boot', 'status', 'tabs', 'editor', 'explorer', 'panes',
+    'dialog', 'session', 'files', 'shortcuts', 'layout', 'problem', 'runtime'
+  ]);
+  assert.deepEqual(Object.keys(urui.panes), [
+    'get', 'set', 'select', 'panel', 'reveal'
   ]);
   assert.deepEqual(Object.keys(urui.tabs), [
     'create', 'close', 'select', 'update', 'list', 'active'

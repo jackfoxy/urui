@@ -21,7 +21,7 @@ test('fixture page presents the three areas', async ({page}) => {
   await expect(panes.nth(1)).toHaveAttribute('data-role', 'editor');
   await expect(panes.nth(2)).toHaveAttribute('data-role', 'result');
 
-  await expect(page.locator('#explorer-tabs')).toHaveAttribute(
+  await expect(page.locator('#explorer-view-tabs')).toHaveAttribute(
     'role', 'tablist');
   await expect(page.locator('.document-tabs')).toHaveCount(2);
   await expect(page.locator('[role="separator"]')).toHaveCount(2);

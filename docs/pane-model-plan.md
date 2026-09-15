@@ -243,7 +243,7 @@ change, then re-record digests. Same workflow as W4.3.
 
 ### Phase 9 — Pane model in urui
 
-#### W9.1 — The mold
+#### W9.1 — The mold (done 2026-09-15)
 
 Files: `desk/sur/urui.hoon`.
 Change: add `$pane-mode`, `$reveal`, `$tab-source`, `$tab-level`,
@@ -255,7 +255,7 @@ Verify: `bin/hoon-parse.js desk/sur/urui.hoon`; nothing else compiles yet
 Done: no `$area` anywhere in urui.
 Scope: S — 2–3h.
 
-#### W9.2 — Shell emits bands
+#### W9.2 — Shell emits bands (done 2026-09-15)
 
 Files: `desk/lib/urui-shell.hoon`.
 Change: `++workspace-area` and `++section` collapse into one `++pane`
@@ -273,7 +273,7 @@ resolves; `bin/check-purity.sh` clean.
 Done: `++section` and `++workspace-area` no longer exist.
 Scope: L — 1–2 days (the largest single rewrite in the phase).
 
-#### W9.3 — Config emits `panes`
+#### W9.3 — Config emits `panes` (done 2026-09-15)
 
 Files: `desk/lib/urui-config.hoon`.
 Change: `++emit` and `++config-json` take `$shell-spec`, not
@@ -290,7 +290,7 @@ Done: every consumer call site passes a spec; `permanentViews` still
 emits identically for graph-viz.
 Scope: M — 4–6h.
 
-#### W9.4 — Runtime reads `panes`
+#### W9.4 — Runtime reads `panes` (done 2026-09-15)
 
 Files: `desk/lib/urui-js.hoon`.
 Change, in four parts:

@@ -3,8 +3,8 @@
 // Consumer-neutral scenarios owned by urui.
 
 const shell = [
-  'shell', 'runtime', 'tabs', 'explorer', 'docs', 'dialogs', 'files',
-  'session', 'shortcuts', 'editor-adapter'
+  'shell', 'runtime', 'tabs', 'panes', 'explorer', 'docs', 'dialogs',
+  'files', 'session', 'shortcuts', 'editor-adapter'
 ];
 const app = [];
 

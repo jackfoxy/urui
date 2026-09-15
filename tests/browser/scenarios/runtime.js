@@ -129,7 +129,7 @@ module.exports = async (env) => {
   assert.equal(activated.at(-1).args[1].previousId, first.id);
 
   //  the strip is rebuilt from the store, marked and labelled
-  const strip = env.elements['#text-document-tabs'];
+  const strip = env.elements['#editor-pane-document-tabs'];
   const isAdd = (node) => {
     return String(node.className).includes('document-tab-add-control');
   };
@@ -159,7 +159,7 @@ module.exports = async (env) => {
   assert.equal(isAdd(add), true);
   assert.equal(add.children[0]['aria-label'], 'Add empty Text tab');
   assert.equal(
-    env.elements['#note-document-tabs'].children.some(isAdd),
+    env.elements['#result-pane-document-tabs'].children.some(isAdd),
     false
   );
   const empty = tabs.addEmpty('text');
@@ -180,18 +180,9 @@ module.exports = async (env) => {
   //  reference tabs, and the user can reorder all of them together.
   const explorer = runtime.explorer;
 
-  //  The permanent tabs are server-rendered by `urui-shell`; the doubles
-  //  only hand out elements by selector, so wire the strip the way the
-  //  page ships it before driving the view.
-  for (const name of ['text-files', 'note-files']) {
-    const tab = env.elements[`#${name}-tab`];
-    tab.role = 'tab';
-    tab.dataset.explorerView = name;
-    tab.setAttribute('aria-controls', `${name}-panel`);
-    const wrapper = new env.Element('div');
-    wrapper.append(tab);
-    env.elements['#explorer-tabs'].append(wrapper);
-  }
+  //  The permanent tabs are server-rendered by `urui-shell` into the
+  //  strip its %views level names, `{pane}-{level}-tabs`; the doubles
+  //  seed that strip for both consumers.
 
   assert.equal(explorer.view(), 'text-files');
   assert.deepEqual(explorer.order(), ['text-files', 'note-files']);
