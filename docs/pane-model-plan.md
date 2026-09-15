@@ -365,7 +365,7 @@ Verify: graph-viz Chromium green; asset-needle sweep zero problems; page
 and javascript digests re-recorded, css unchanged.
 Scope: M — 4–6h.
 
-#### W10.2 — Attribute sub-panes become reveal bands
+#### W10.2 — Attribute sub-panes become reveal bands (done 2026-09-15)
 
 Files: `graph-viz/desk/lib/gviz-web.hoon`.
 Change: the node and edge attribute blocks inside `++result-body` split
