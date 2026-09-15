@@ -124,11 +124,14 @@
   ==
 ::
 ++  spec
+  ::  `our` reaches exactly one band — the reference pane's ship label.
+  ::  Every other value in the spec is static.
+  |=  our=@p
   ^-  shell-spec:urui
   :*  config
       brand
       toolbar
-      [reference-pane editor-pane result-pane]
+      [(reference-pane our) editor-pane result-pane]
       help
       dialogs=~
       styles=~['/apps/urui-fixture/app.css']
@@ -183,6 +186,10 @@
   [name [`key open label] item]
 ::
 ++  reference-pane
+  ::  Read-only: its level asks for no `+` and no close, and the mode
+  ::  would refuse both anyway.  The ship label is the %label band, and
+  ::  the reference pane is the only place urui puts one.
+  |=  our=@p
   ^-  pane:urui
   :*  role=%reference
       id='explorer'
@@ -190,6 +197,7 @@
       mode=%read-only
       kind=~
       :~  (pinned %tabs [%tabs ~[reference-level]])
+          (pinned %ship [%label (scot %p our)])
           (pinned %body [%panel 'explorer-body' ~ ~])
       ==
   ==
@@ -215,7 +223,10 @@
       label='Fixture editor'
       mode=%read-write
       kind=`%text
-      :~  (pinned %head [%heading `'Source' `'source-status' ~])
+      ::  The tabs come first and the heading after them: the other
+      ::  ordering from the result pane, out of the same two items.
+      :~  (pinned %tabs [%tabs ~[editor-level]])
+          (pinned %head [%heading `'Source' `'source-status' ~])
           ::  open by default: the file controls are what the browser
           ::  specs click, and the reveal round-trip closes them
           %:  hideable
@@ -225,7 +236,6 @@
             label='File controls'
             [%controls editor-controls]
           ==
-          (pinned %tabs [%tabs ~[editor-level]])
           (pinned %body [%panel 'editor-body' ~ ~[editor-host]])
       ==
   ==
@@ -271,6 +281,10 @@
   ^-  pane:urui
   ::  Pane 3 has no default: the fixture supplies a <pre>, exactly as a
   ::  real consumer supplies its preview, grid, or report.
+  ::
+  ::  Its heading is listed before the tabs, and three levels hang off
+  ::  them: the note store, two fixed views of it, and one dynamic level
+  ::  the fixture fills through `runtime.panes.set`.
   :*  role=%result
       id='result-pane'
       label='Fixture result'
@@ -369,8 +383,16 @@
   ==
 ::
 ++  page
+  ::  The page as ~zod.  The offline browser server and the digest
+  ::  tooling compile this arm and neither has a ship; a running agent
+  ::  serves `(page-for our.bowl)` through the same gate.
   ^-  @t
-  (crip (en-xml:html (build:shell spec)))
+  (page-for ~zod)
+::
+++  page-for
+  |=  our=@p
+  ^-  @t
+  (crip (en-xml:html (build:shell (spec our))))
 ::
 ++  css
   ^-  @t
@@ -385,7 +407,7 @@
 ++  javascript
   ^-  @t
   %+  rap  3
-  :~  (emit:ucfg spec)
+  :~  (emit:ucfg (spec ~zod))
       core:ujs
       mode-js
       app-js
@@ -515,6 +537,37 @@
     key: 'Enter', ctrlKey: true,
     preventDefault: () => {}, stopPropagation: () => {}
   });
+  //  the result pane's two generated levels: %view is fixed and needs
+  //  no call, %set is dynamic and is refilled from the active note
+  //  whenever that note changes.  A blank line starts a new section.
+  let sections = [];
+  const noteSections = (source) => {
+    return String(source || '').split(/\n{2,}/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part, index) => ({
+        id: `part-${index + 1}`,
+        label: `Part ${index + 1}`,
+        source: part
+      }));
+  };
+  const paintSection = () => {
+    const [, view, part] = runtime.panes.path('result-pane');
+    const panel = runtime.panes.panel('result-pane');
+    if (!panel) return;
+    panel.textContent = view === 'messages'
+      ? `${sections.length} section(s)`
+      : sections.find((item) => item.id === part)?.source ?? '';
+  };
+  //  filled from a tab hook, never from `onRendered`: ++setLevelTabs
+  //  renders, and rendering back into it would not terminate
+  const syncSections = () => {
+    sections = noteSections(runtime.tabs.active('note')?.source);
+    runtime.panes.set('result-pane', 'set', sections.map((item) => {
+      return {id: item.id, label: item.label};
+    }));
+    paintSection();
+  };
   const runtime = window.urui.runtime({
     elements: {
       explorerPane: document.querySelector('#explorer'),
@@ -533,6 +586,7 @@
     onResize: fixtureHook('runtime', 'resize', undefined),
     onHelpOpen: fixtureHook('runtime', 'helpOpen', undefined),
     onTabsRendered: fixtureHook('runtime', 'tabsRendered', undefined),
+    panes: {onSelect: () => paintSection()},
     session: {
       read: (key) => {
         if (key === 'source') {
@@ -603,6 +657,7 @@
           }
           const result = document.querySelector('#fixture-result');
           if (result) result.textContent = tab.source;
+          syncSections();
         }
       }
     }
@@ -690,6 +745,7 @@
       runtime.tabs.render('note');
       const result = document.querySelector('#fixture-result');
       if (result) result.textContent = noteEditor.getSource();
+      syncSections();
       runtime.session.queue();
     });
   }

@@ -336,7 +336,7 @@ Verify: both themes by eye at all three depths; digests re-recorded.
 Done: no consumer id remains in `urui-css.hoon`.
 Scope: M — 4–6h.
 
-#### W9.6 — Fixture proves it generically
+#### W9.6 — Fixture proves it generically (done 2026-09-15)
 
 Files: `tests/fixture/lib/urui-fixture-web.hoon`,
 `tests/browser/real/`.
@@ -353,7 +353,7 @@ Scope: L — 1–2 days.
 
 ### Phase 10 — graph-viz migration
 
-#### W10.1 — Pane definitions
+#### W10.1 — Pane definitions (done 2026-09-15)
 
 Files: `graph-viz/desk/lib/gviz-web.hoon`.
 Change: sync urui's eight files in; `++reference-area`/`++editor-area`/

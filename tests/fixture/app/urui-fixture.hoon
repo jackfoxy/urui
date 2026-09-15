@@ -33,13 +33,17 @@
   [[status ~[['content-type' content-type]]] `(as-octt:mimes:html (trip body))]
 ::
 ++  assets
-  ::  Ship routes mirror the offline browser server byte for byte.
+  ::  Ship routes mirror the offline browser server byte for byte, but
+  ::  for the ship: the reference pane's label carries `our`, so the
+  ::  page is built here rather than read off the static arm.
+  |=  our=@p
   ^-  (list [suffix=@t asset=asset:uhttp])
   =/  js=@t  'text/javascript; charset=utf-8'
   =/  text=@t  'text/plain; charset=utf-8'
+  =/  html=@t  (page-for:web our)
   %+  turn
-    :~  ['' 'text/html; charset=utf-8' page:web]
-        ['/' 'text/html; charset=utf-8' page:web]
+    :~  ['' 'text/html; charset=utf-8' html]
+        ['/' 'text/html; charset=utf-8' html]
         ['/app.js' js javascript:web]
         ['/app.css' 'text/css; charset=utf-8' css:web]
         ['/ace/ace.js' js ace-core]
@@ -103,7 +107,8 @@
       :_  this
       (respond eyre-id 403 'text/plain; charset=utf-8' 'forbidden')
     ?:  =(method %'GET')
-      =/  asset  (asset-route:uhttp '/apps/urui-fixture' (crip url) assets)
+      =/  routes  (assets our.bowl)
+      =/  asset  (asset-route:uhttp '/apps/urui-fixture' (crip url) routes)
       ?~  asset
         :_  this
         (respond eyre-id 404 'text/plain; charset=utf-8' 'not found')

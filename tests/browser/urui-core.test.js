@@ -10,12 +10,31 @@ if (!application) throw new Error('set URUI_APP_JS to the assembled bundle');
 const applicationSource = fs.readFileSync(application, 'utf8');
 
 //  The bundle now builds a shell runtime at boot, so the bare context
-//  needs just enough of a document for element lookups to answer null.
+//  needs just enough of a document for element lookups to answer null
+//  and for a detached element — a pane's content panel — to be built.
+function stubElement(localName) {
+  return {
+    localName,
+    dataset: {},
+    style: {},
+    classList: {add: () => {}, remove: () => {}, toggle: () => {}},
+    children: [],
+    textContent: '',
+    append: () => {},
+    remove: () => {},
+    replaceChildren: () => {},
+    setAttribute: () => {},
+    addEventListener: () => {},
+    querySelector: () => null
+  };
+}
+
 function stubDocument() {
   const root = {dataset: {}, style: {}, classList: {toggle: () => {}}};
   return {
     documentElement: root,
     querySelector: () => null,
+    createElement: stubElement,
     addEventListener: () => {}
   };
 }

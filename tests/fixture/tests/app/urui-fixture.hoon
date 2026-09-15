@@ -61,7 +61,7 @@
   ?~  data  ''
   (crip (trip q.u.data))
 ::
-++  test-page-serves-three-areas
+++  test-page-serves-three-panes
   =/  cards  -:(poke-http (request %'GET' '/apps/urui-fixture' ~))
   =/  body  (response-body cards)
   ;:  weld
@@ -71,13 +71,23 @@
     (expect !>(?=(^ (find "id=\"result-pane\"" (trip body)))))
   ==
 ::
-++  test-page-areas-carry-roles
+++  test-page-panes-carry-roles
   =/  cards  -:(poke-http (request %'GET' '/apps/urui-fixture' ~))
   =/  body  (response-body cards)
   ;:  weld
     (expect !>(?=(^ (find "data-role=\"reference\"" (trip body)))))
     (expect !>(?=(^ (find "data-role=\"editor\"" (trip body)))))
     (expect !>(?=(^ (find "data-role=\"result\"" (trip body)))))
+  ==
+::
+++  test-page-label-band-carries-the-ship
+  ::  The only asset the ship builds rather than reads off a static arm:
+  ::  `our` reaches the reference pane's %label band and nothing else.
+  =/  cards  -:(poke-http (request %'GET' '/apps/urui-fixture' ~))
+  =/  body  (trip (response-body cards))
+  ;:  weld
+    (expect !>(?=(^ (find "id=\"explorer-ship\"" body))))
+    (expect !>(?=(^ (find "<span class=\"pane-label\">~zod</span>" body))))
   ==
 ::
 ++  test-assets-answer-with-their-own-types
