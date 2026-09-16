@@ -377,12 +377,21 @@ open/closed state survives a reload.
 Done: no show/hide code for those two blocks remains in `++app-js`.
 Scope: M — 4–6h.
 
-#### W10.3 — Gate
+#### W10.3 — Gate (done 2026-09-15)
 
 Verify: `bin/verify-sync.sh --strict`, `bin/check-purity.sh`, both
 `run-real.sh` suites, both `test:shortcuts`, the clean-checkout drill
 from W6.2. Record the urui SHA in graph-viz's release notes.
 Scope: S — 2–3h.
+
+Completed: strict sync, purity, both shortcut manifests, and the 54-case urui
+and 17-case graph-viz Chromium suites pass. A standalone graph-viz clone with
+no urui sibling passed `check.sh verify`, both browser runners, a fresh-ship
+`|commit`, the full desk suite (`ok=%.y`), installation, and installed-desk
+Node and Chromium smoke. The sibling-clone strict-sync drill passes. The drill
+used urui `baaa7db676e30ee13b25fc678f8774c52bbed92b` and graph-viz
+`55e951feab38aeeb93c1a5f8a0d57571819c1e6a` plus the W10.3 worktree changes;
+graph-viz's release notes record the urui source revision.
 
 ### Phase 11 — obelisk adoption, increment 2
 

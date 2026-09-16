@@ -70,6 +70,7 @@ test('Ace accepts real keyboard input and updates the application once', async (
   });
   await page.keyboard.type(' ');
   await expect.poll(() => renderRequests.length).toBe(1);
+  await expect(page.locator('#source-status')).toHaveText('Ready');
   const finalSource = `${smokeSource} `;
 
   const state = await page.evaluate(() => ({
