@@ -1,0 +1,8 @@
+:~  title+'urui fixture'
+    info+'Disposable consumer used to test the urui shell.'
+    color+0x57.6b95
+    version+[0 0 1]
+    website+'https://github.com/jackfoxy/urui'
+    license+'MIT'
+    site+/apps/urui-fixture
+==

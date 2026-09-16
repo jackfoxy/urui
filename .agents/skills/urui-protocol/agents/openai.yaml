@@ -1,0 +1,3 @@
+interface:
+  display_name: "urui Protocol"
+  short_description: "Inspect, extend, or change the urui shell contracts in a consuming desk"
