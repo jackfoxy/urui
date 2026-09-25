@@ -241,6 +241,22 @@ test('Add Ref creates persistent, synced, read-only Text and Note tabs', async (
   await expect(page.locator('.ref-source'))
     .toHaveText('digraph initial {}');
 
+  //  The reference document fills the explorer, rather than collapsing
+  //  to the height of its own text.  The panels live inside the %tabs
+  //  band, so this breaks whenever the pane's own box model assumes a
+  //  fixed band order.
+  const fill = await page.evaluate(() => {
+    const height = (selector) => {
+      return document.querySelector(selector)?.getBoundingClientRect().height;
+    };
+    return {
+      pane: height('.explorer-pane'),
+      panel: height('.ref-explorer-panel')
+    };
+  });
+  expect(fill.pane).toBeGreaterThan(200);
+  expect(fill.panel).toBeGreaterThan(fill.pane * 0.7);
+
   await page.evaluate(() => {
     const editor = window.__URUI_EDITOR_TEST__;
     editor.replaceRange(editor.getSource().length, editor.getSource().length,
