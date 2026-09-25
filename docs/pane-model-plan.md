@@ -495,10 +495,8 @@ dialog beside the help panel in both the full and compact frames.
   delete their own — two `#theme` elements in one page would be a
   duplicate id, and `++test-shell-page` now pins the page to exactly
   three `<option>`s to catch it.
-- **Keybindings radios** (`#keys-ace`, `#keys-vim`) are declared inert.
-  The choice is validated, persisted, and restored through
-  `preferences.keybindings`; nothing reads it until an editor adapter
-  implements vim.
+- **Keybindings radios** (`#keys-ace`, `#keys-vim`) select the editor
+  keymap; see W10.6.
 - **The button is right-justified.** `.app-header` is `space-between`,
   so a third child would sit in the middle of it; `.settings-button`
   takes `margin-left: auto` to absorb that slack and land hard right,
@@ -544,6 +542,82 @@ every synced file `in-sync`. Digests re-recorded: page
 Done: no consumer emits a theme control; the screen format survives a
 reload.
 Scope: L — 1–2 days.
+
+#### W10.6 — Vim keybindings (done 2026-09-25)
+
+Files: `desk/web/ace/keybinding-vim.js` (new), `desk/web/ace/README.md`,
+`bin/sync-manifest.txt`, `desk/lib/urui-js.hoon`,
+`tests/browser/doubles/ace.js`,
+`tests/fixture/app/urui-fixture.hoon`,
+`tests/browser/ace-assets-routed.test.js` (new),
+`tests/browser/real/vim-keybindings.spec.js` (new),
+`tests/browser/real/ace-assets.spec.js`,
+`graph-viz/tests/browser/real/serve-app.js`,
+`graph-viz/desk/app/graph-viz-web.hoon`,
+`graph-viz/tests/browser/ace-assets-routed.test.js` (new).
+
+The Settings radios were inert because the vim keymap was not vendored —
+the README's runtime list said in as many words that no alternate
+keybinding was shipped. It is now the one exception.
+
+- **Vendored** `keybinding-vim.js` from the same `ace-builds` 1.44.0
+  tarball the rest of the runtime came from; the npm integrity hash
+  matches the one already pinned in the README, and the whitespace
+  transform was verified by reproducing `ext-prompt.js` byte for byte
+  from upstream. 268 KB, longest logical line 1,516 bytes, so Clay's
+  32 KiB ingestion limit is not close.
+- **Not listed in `exts`.** `exts` is loaded by plain module name, and
+  `ace/keyboard/vim` resolves that way to `keyboard-vim.js`, which does
+  not exist. Ace fetches a keyboard handler through its own
+  `["keybinding", id]` form, which resolves to the vendored filename.
+  The fixture's `++spec` carries a comment saying so.
+- **Applied like the theme.** The Ace adapter gains `setKeybindings`,
+  and the shell pushes the preference to every adapter that implements
+  it. The choice is also written to `document.documentElement.dataset
+  .keybindings`, the same carrier the effective theme uses, so an editor
+  mounted at any later point in the session starts on the keymap already
+  in force rather than on Ace's default.
+
+New spec `vim-keybindings.spec.js`, five cases: the handler installs and
+Ace's default returns (`null` is Ace's own keymap, not a named one);
+normal-mode `gg`/`dd`/`x`/`i`/Escape; `yy`/`p`; a pinned manifest chord
+(`Ctrl-D`, "Remove line") displaced by vim's half-page-down and restored
+on switching back; and the choice surviving a reload into a
+later-mounted editor. The shared Ace double gains
+`setKeyboardHandler`/`getKeyboardHandler`.
+
+**The manifest now records its own keymap.** `ace-win-linux-shortcuts
+.json` pins 100 rows recorded under Ace's default keymap, and its
+`scope` block already pinned the three other axes keybindings depend on
+(ace platform, host platform, keyboard layout) — see the note at the top
+of `playwright.base.js`. Selecting Vim made the keymap a fourth such
+axis, so `scope` gains `"keymap": "ace-default"` and
+`ace-shortcuts.test.js` asserts it. This is scope documentation, not a
+correctness fix: each Playwright test gets a fresh context (no
+`storageState`), so the preference cannot leak between tests, and a run
+under the wrong keymap would fail those 100 assertions rather than pass
+them. The `Ctrl-D` case above is the one place the two keymaps are
+deliberately compared.
+
+**Serving the asset is a second, hand-written list.** `serve-app.js`
+answers `/ace/<name>` from `desk/web/ace/` by filename, so every browser
+test passed while a real ship returned 404 and Ace silently kept its
+default keymap — vendoring the file is not the same as routing it. Each
+agent Ford-imports and lists its assets by hand
+(`tests/fixture/app/urui-fixture.hoon`, `graph-viz/desk/app/graph-viz-
+web.hoon`), and nothing compared either list against the directory. Both
+agents now carry `keybinding-vim.js`, and a new node test in each repo,
+`ace-assets-routed.test.js` (`npm run test:assets`), fails when a
+vendored file is missing from its agent — verified by deleting the route
+and watching it name the file.
+
+Verify: urui Chromium 64/64 (5 new); urui node scenarios 3/3;
+`ace-shortcuts.test.js` 7/7 (now asserting `scope.keymap`); urui hoon suites green; graph-viz Chromium
+18/18, node scenarios ok, `test:shortcuts` 3/3; purity clean; sync
+clean. graph-viz javascript digest
+`e287553965b2710ba7f9956aa1a5de061d6d653fb14c0250469b18ee3bfaa8c1`
+(185114); page and css unchanged from W10.5.
+Scope: M — 4–6h.
 
 ### Phase 11 — obelisk adoption, increment 2
 
@@ -623,6 +697,7 @@ Scope: S — 2–3h.
 | W10.3 | S | 2–3h |
 | W10.4 | M | 4–6h |
 | W10.5 | L | 1–2 days |
+| W10.6 | M | 4–6h |
 | W11.1 | L | ~1 day |
 | W11.2 | L | ~1 day |
 | W11.3 | L | 1–2 days |
@@ -640,6 +715,7 @@ W11.1).
 | W10.3 | revert the paired urui/graph-viz commits together |
 | W10.4 | revert the paired urui/graph-viz commits together |
 | W10.5 | revert the paired urui/graph-viz commits together |
+| W10.6 | revert the paired urui/graph-viz commits together |
 | W11.1 | obelisk-local; its own explorer returns intact |
 | W11.2 | obelisk-local; graph-viz unaffected |
 | W11.3 | obelisk-local; its javascript tab code returns intact |

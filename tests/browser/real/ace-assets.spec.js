@@ -12,7 +12,7 @@ test('fixture loads a real text editor and shared Ace modules', async ({
   for (const name of [
     'ace.js', 'config.js', 'theme-github.js', 'theme-monokai.js',
     'ext-beautify.js', 'ext-prompt.js', 'ext-searchbox.js',
-    'ext-settings_menu.js'
+    'ext-settings_menu.js', 'keybinding-vim.js'
   ]) {
     const response = await request.get(`${base}/${name}`);
     expect(response.status(), name).toBe(200);

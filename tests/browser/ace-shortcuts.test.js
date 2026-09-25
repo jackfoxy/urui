@@ -25,6 +25,10 @@ test('manifest pins the Windows/Linux test environment', () => {
   assert.equal(manifest.scope.acePlatform, 'win');
   assert.equal(manifest.scope.hostPlatform, 'linux');
   assert.equal(manifest.scope.keyboardLayout, 'en-US');
+  //  Every row below was recorded under Ace's own keymap.  Selecting
+  //  Vim in Settings replaces it wholesale, so a run under any other
+  //  keymap is out of this manifest's scope.
+  assert.equal(manifest.scope.keymap, 'ace-default');
   assert.equal(manifest.scope.status, 'default-shortcuts-complete');
   assert.match(manifest.source.revision, /^[0-9a-f]{40}$/);
 });

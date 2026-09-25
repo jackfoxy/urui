@@ -40,9 +40,11 @@ test('Settings opens a modal holding theme, keybindings, and format',
       '#layout-columns', '#layout-rows']) {
       await expect(page.locator(id)).toBeVisible();
     }
-    //  Ace is the default and vim is declared but inert.
+    //  Ace is the default; vim is live and proved in vim-keybindings.
     await expect(page.locator('#keys-ace')).toBeChecked();
     await expect(page.locator('#keys-vim')).not.toBeChecked();
+    await expect(page.locator('#keys-ace')).toBeEnabled();
+    await expect(page.locator('#keys-vim')).toBeEnabled();
 
     //  Escape closes and restores focus to the button that opened it.
     await page.keyboard.press('Escape');

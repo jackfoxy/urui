@@ -76,6 +76,9 @@
           mode='ace/mode/fixture'
           light='ace/theme/github'
           dark='ace/theme/monokai'
+          ::  the vim keymap is not listed here: `exts` is loaded by
+          ::  plain module name, and Ace fetches a keyboard handler
+          ::  through its own ["keybinding", id] form instead
           :~  'ace/ext/beautify'  'ace/ext/prompt'
               'ace/ext/searchbox'  'ace/ext/settings_menu'
           ==
