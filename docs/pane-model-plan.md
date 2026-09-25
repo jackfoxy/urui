@@ -477,6 +477,74 @@ way to open attributes; no partial attribute row can display; the
 selection count alone decides which group is open.
 Scope: M — 4–6h.
 
+#### W10.5 — Settings modal and screen format (done 2026-09-25)
+
+Files: `desk/lib/urui-shell.hoon`, `desk/lib/urui-css.hoon`,
+`desk/lib/urui-js.hoon`, `tests/fixture/lib/urui-fixture-web.hoon`,
+`desk/tests/lib/urui-shell.hoon`, `tests/browser/real/settings.spec.js`,
+`tests/browser/real/ace-undo-redo.spec.js`,
+`graph-viz/desk/lib/gviz-web.hoon`,
+`graph-viz/tests/browser/real/css-cascade.spec.js`.
+
+New frame furniture, urui-owned end to end: a `#settings` button emitted
+immediately before the consumer's toolbar marl, and a `#settings-modal`
+dialog beside the help panel in both the full and compact frames.
+
+- **The theme control moves into the modal**, at the same `#theme` id
+  the runtime has always bound, so the js is untouched. Consumers must
+  delete their own — two `#theme` elements in one page would be a
+  duplicate id, and `++test-shell-page` now pins the page to exactly
+  three `<option>`s to catch it.
+- **Keybindings radios** (`#keys-ace`, `#keys-vim`) are declared inert.
+  The choice is validated, persisted, and restored through
+  `preferences.keybindings`; nothing reads it until an editor adapter
+  implements vim.
+- **The button is right-justified.** `.app-header` is `space-between`,
+  so a third child would sit in the middle of it; `.settings-button`
+  takes `margin-left: auto` to absorb that slack and land hard right,
+  one header gap left of whatever the consumer's toolbar begins with.
+  Stacked narrow, the auto margin is reset so it is a full-width row
+  like the toolbar below it.
+- **Screen format** is two pictogram buttons, `#layout-columns` and
+  `#layout-rows`, drawn as css boxes rather than images so they take the
+  frame's own border and accent colours in either theme. `setLayout`
+  writes `data-layout` on `#workspace`; the stylesheet does the rest.
+  `columns` is reference, editor and render side by side; `rows` is
+  reference beside editor stacked over render. The reference pane is
+  vertical and leftmost in both — only the workspace changes.
+- **Each format keeps its own divider position**: `--editor-width` for
+  columns, `--editor-height` for rows, persisted as `paneWidth` and the
+  new `paneHeight` slot. The splitter reads `layout` to pick its drag
+  axis and its arrow keys, and carries the matching
+  `aria-orientation`.
+
+Three new consumer slots: `preferences.layout`,
+`preferences.keybindings`, `paneHeight`.
+
+**Behaviour change, decided 2026-09-25:** the narrow query no longer
+restacks the panes, hides the explorer resizer, or drops the splitter.
+The screen format is the user's choice at every viewport width and every
+divider stays draggable, so the 760px query now only relaxes minimums.
+graph-viz's render-pane divider border moves from that query onto
+`.workspace[data-layout='rows']`, where it belongs.
+
+Verify: urui Chromium 58/58 (4 new in `settings.spec.js` — modal
+contents and Escape focus restore, the button's measured position
+right-justified and adjacent to Help, orientation plus reload
+persistence with the reference pane proven still leftmost, and
+per-format divider positions); urui node scenarios 3/3; all eight urui hoon suites green;
+graph-viz Chromium 18/18; graph-viz node scenarios ok; purity clean;
+every synced file `in-sync`. Digests re-recorded: page
+`aae132d4810298749123e16591e22d2cd5c975b069ffb5ca5a727085ff08d408`
+(43936), css
+`bcdc2e5beb59090dbbc20555dce10f8671ef0e59be45eeb7e48b063057a3ecc4`
+(25351), javascript
+`b6f00521d5a6c35c4f83ff57b7eaad31d85625d198eaa18c506b3e7d4a6e1c30`
+(184326).
+Done: no consumer emits a theme control; the screen format survives a
+reload.
+Scope: L — 1–2 days.
+
 ### Phase 11 — obelisk adoption, increment 2
 
 Prereq: Phase 8 less W8.4 complete, Phase 9 released, Phase 10 proving
@@ -554,6 +622,7 @@ Scope: S — 2–3h.
 | W10.2 | M | 4–6h |
 | W10.3 | S | 2–3h |
 | W10.4 | M | 4–6h |
+| W10.5 | L | 1–2 days |
 | W11.1 | L | ~1 day |
 | W11.2 | L | ~1 day |
 | W11.3 | L | 1–2 days |
@@ -570,6 +639,7 @@ W11.1).
 | W9.6 | urui-only; no consumer has synced yet |
 | W10.3 | revert the paired urui/graph-viz commits together |
 | W10.4 | revert the paired urui/graph-viz commits together |
+| W10.5 | revert the paired urui/graph-viz commits together |
 | W11.1 | obelisk-local; its own explorer returns intact |
 | W11.2 | obelisk-local; graph-viz unaffected |
 | W11.3 | obelisk-local; its javascript tab code returns intact |

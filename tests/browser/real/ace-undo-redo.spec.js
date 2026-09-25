@@ -573,7 +573,12 @@ test('echo, theme, resize, tabs, and note load do not enter history',
 
     await page.locator('#echo').click();
     await expect.poll(() => observations.renderBodies.length).toBe(1);
+    // The theme control lives in the settings modal now.
+    await page.locator('#settings').click();
+    await expect(page.locator('#settings-modal')).toBeVisible();
     await page.locator('#theme').selectOption('dark');
+    await page.locator('#close-settings').click();
+    await expect(page.locator('#settings-modal')).toBeHidden();
     await page.locator('#splitter').press('ArrowRight');
     await page.locator('#note-files-tab').click();
     await expect(page.locator('[data-path="history/md"]')).toBeVisible();

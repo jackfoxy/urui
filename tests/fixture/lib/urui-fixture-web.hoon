@@ -110,6 +110,9 @@
       ['view' %app %record ~]
       ['preferences.autoEcho' %app %scalar ~]
       ['preferences.theme' %urui %scalar ~]
+      ['preferences.layout' %urui %scalar ~]
+      ['preferences.keybindings' %urui %scalar ~]
+      ['paneHeight' %urui %scalar ~]
   ==
 ::
 ++  shortcuts
@@ -155,14 +158,6 @@
 ++  toolbar
   ^-  marl
   :~  ;nav.toolbar(aria-label "Fixture controls")
-        ;label.theme-control
-          ;span: Theme
-          ;select#theme(aria-label "Theme")
-            ;option(value "system"): System
-            ;option(value "light"): Light
-            ;option(value "dark"): Dark
-          ==
-        ==
         ;button#help(type "button", aria-expanded "false"): Help
         ;button#echo.primary(type "button"): Echo
         ;div#editor-load-error.editor-load-error(hidden "", role "alert");
