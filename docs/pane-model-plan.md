@@ -365,7 +365,8 @@ Verify: graph-viz Chromium green; asset-needle sweep zero problems; page
 and javascript digests re-recorded, css unchanged.
 Scope: M — 4–6h.
 
-#### W10.2 — Attribute sub-panes become reveal bands (done 2026-09-15)
+#### W10.2 — Attribute sub-panes become reveal bands (done 2026-09-15,
+**superseded by W10.4**)
 
 Files: `graph-viz/desk/lib/gviz-web.hoon`.
 Change: the node and edge attribute blocks inside `++result-body` split
@@ -376,6 +377,10 @@ Verify: the visual-editing spec still passes; the two sub-panes'
 open/closed state survives a reload.
 Done: no show/hide code for those two blocks remains in `++app-js`.
 Scope: M — 4–6h.
+
+The `+`-label half of this item stands. The reveal-band half was wrong
+for graph-viz and W10.4 reverses it; the mold itself is unaffected, and
+the fixture still proves reveal bands generically (W9.6).
 
 #### W10.3 — Gate (done 2026-09-15)
 
@@ -392,6 +397,85 @@ Node and Chromium smoke. The sibling-clone strict-sync drill passes. The drill
 used urui `baaa7db676e30ee13b25fc678f8774c52bbed92b` and graph-viz
 `55e951feab38aeeb93c1a5f8a0d57571819c1e6a` plus the W10.3 worktree changes;
 graph-viz's release notes record the urui source revision.
+
+#### W10.4 — Attributes are selection-revealed, not band-revealed (done 2026-09-25)
+
+Files: `graph-viz/desk/lib/gviz-web.hoon`,
+`graph-viz/desk/tests/lib/gviz-web.hoon`,
+`tests/browser/doubles/dom.js`,
+`graph-viz/tests/browser/real/visual-editing.spec.js`,
+`graph-viz/tests/browser/scenarios/visual-editing.js`.
+
+W10.2 put graph-viz's node and edge attributes in two reveal bands. That
+split one logical display in two — the shared controls (Label, Color,
+Line style) stayed in `#attribute-form` inside the panel while the
+kind-specific controls sat in bands above it, each behind its own toggle,
+and both could be open at once for a selection that is only ever one
+kind. Reverted to one display, driven by selection:
+
+- `++node-attribute-band` and `++edge-attribute-band` are deleted, and
+  with them the only two `reveal` keys graph-viz declared. The result
+  pane's bands are all `pinned` again.
+- `++node-attributes` and `++edge-attributes` are spliced into
+  `#attribute-form`, wrapped as `#node-controls` and `#edge-controls`,
+  both `hidden` at rest.
+- `revealAttributeGroup(kind)` in `++app-js` opens exactly one group,
+  and `closeAttributes` shuts both. `populateAttributeForm` calls the
+  first with the selected kind.
+- Selection count drives which group opens. One node opens the node
+  group; one edge opens the edge group; **two nodes open the edge
+  group**, because two nodes name the edge between them —
+  `edgeForSelectedNodes` looks for an edge already joining them in
+  *either* direction and opens its real attributes, falling back to a
+  blank group for the edge Apply would create (`New edge` in the
+  heading). Three or more closes everything; that branch is unreachable
+  while `selectVisualElement` caps the selection at two, and is written
+  to be correct if the cap ever moves.
+- `attributeTarget` replaces the old `selectedItems.length !== 1` guard
+  in `applySelectedAttributes`, so Apply on two selected nodes writes
+  the edge — creating it through `insertRootStatement` when it does not
+  exist yet, in one undoable edit and one render. `#draw-edge` remains
+  the no-attributes shortcut for the same thing.
+- A document-level click listener closes the attributes on any click
+  outside `#inspector`, except a click that lands on another `.node` or
+  `.edge` — the preview's own listener has already repopulated the form
+  by the time it runs.
+
+Fixed alongside, found by testing two selected nodes: `.attribute-form`
+declared `display: grid` but had no `[hidden]` rule, and `display` beats
+the `hidden` attribute — so `attributeForm.hidden = true` had been a
+no-op since the form became a grid. Two selected nodes are a prospective
+edge with no statement to read, so the code hid the form and showed a
+stranded Label/Color/Line-style row instead. `.inspector[hidden]` and
+`.preview[hidden]` already carried the guard; only this one was missing.
+Every element `++app-js` assigns `.hidden` to now has a matching
+`[hidden]` rule — audited, five of them.
+
+The urui reveal machinery is untouched and still proved by the fixture
+(W9.6); graph-viz simply has no band that uses it. One synced file
+changed, so this is a paired commit: urui's `doubles/dom.js` now chains
+document listeners instead of replacing them (urui's context-menu
+handler and a consumer's must coexist, as they do in a browser) and
+carries `#node-controls`.
+
+Verify: `bin/check-purity.sh` clean; `bin/verify-sync.sh --strict`
+reports every manifest file `in-sync` (it still exits 1 on graph-viz's
+two npm `node_modules/.bin` symlinks, as it does on a clean checkout —
+pre-existing, unrelated to this item); `desk/tests/lib/gviz-web.hoon`
+10/10 through
+`bin/hoon-test.js`; graph-viz node scenarios ok against a freshly
+compiled `app.js`; graph-viz Chromium 18/18; urui Chromium 54/54.
+Digests re-recorded: page
+`8728b93db414600a6842f9deb98b3e75483597a87e037e69e222f4d7f54c6e39`
+(39789), css
+`933387485cecb6ad3dee0db64e536ad6562d8657653c0f5401e9dfd2a65285ab`
+(23144), javascript
+`4b9a98071f779c08a0d242f5b7e742217f3e141b2d013fae9c01154992e324a9`
+(179292).
+Done: no `reveal` key remains in `gviz-web.hoon`; clicking is the only
+way to open attributes; no partial attribute row can display; the
+selection count alone decides which group is open.
+Scope: M — 4–6h.
 
 ### Phase 11 — obelisk adoption, increment 2
 
@@ -469,12 +553,13 @@ Scope: S — 2–3h.
 | W10.1 | M | 4–6h |
 | W10.2 | M | 4–6h |
 | W10.3 | S | 2–3h |
+| W10.4 | M | 4–6h |
 | W11.1 | L | ~1 day |
 | W11.2 | L | ~1 day |
 | W11.3 | L | 1–2 days |
 | W11.4 | S | 2–3h |
 
-Phase 9 ≈ 6–7 days, Phase 10 ≈ 2 days, Phase 11 ≈ 4–5 days. Total
+Phase 9 ≈ 6–7 days, Phase 10 ≈ 2–3 days, Phase 11 ≈ 4–5 days. Total
 ≈ 12–14 focused days, on top of Phase 8's ≈ 3–4 (W8.4's day moves into
 W11.1).
 
@@ -484,6 +569,7 @@ W11.1).
 |---|---|
 | W9.6 | urui-only; no consumer has synced yet |
 | W10.3 | revert the paired urui/graph-viz commits together |
+| W10.4 | revert the paired urui/graph-viz commits together |
 | W11.1 | obelisk-local; its own explorer returns intact |
 | W11.2 | obelisk-local; graph-viz unaffected |
 | W11.3 | obelisk-local; its javascript tab code returns intact |
