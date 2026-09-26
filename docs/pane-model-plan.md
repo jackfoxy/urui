@@ -762,7 +762,7 @@ runner cannot read clay); urui's seven suites pass inside obelisk;
 `ace-assets-routed.test.js` 2/2. Owed: `-test /=obelisk=/tests ~` on a
 ship.
 
-#### W11.3 — Page and stylesheet from `$shell-spec`
+#### W11.3 — Page and stylesheet from `$shell-spec` (done 2026-09-25)
 
 Files: `obelisk/desk/lib/obelisk-web.hoon`.
 
@@ -794,6 +794,52 @@ for the grid, resizers, header, help panel, and theme are deleted.
 Verify: page, `app.js`, `app.css` tests (09–12) still pass; visual check
 in both themes and both formats.
 Scope: L — 1 day.
+
+Completed. Pane ids are `explorer-pane`, `editor-pane`, and
+`output-pane` (label `Output`, so the control reads "Collapse Output").
+Ids obelisk's javascript already binds are kept wherever the element
+survives — `#results`, `#query-editor`, `#markdown-preview`,
+`#html-preview`, `#run-btn`, `#parse-btn`, `#default-db`, the save and
+copy buttons, every dialog and menu — so W11.4 rewires behaviour, not
+lookups. Departures from the table above:
+
+- The `@p` `%label` band leads the reference pane: the `%tabs` band
+  carries the panels and grows, so a band after it sits at the bottom.
+- The Ace host is obelisk's own `div#query-editor.ace-editor-host`
+  inside the panel body (`host=~`), as graph-viz does, so it stacks with
+  the previews instead of sitting beside `.pane-body`.
+- Help is `#help` (urui binds it), not `#help-btn`; the toast is
+  `.app-status`, because urui's `.status` is the pane status line.
+- Query tabs have `reorder=|`: obelisk never had drag reordering.
+- `pane-min`/`pane-max` are 30/85, obelisk's old output clamp of
+  15–70%; `--editor-height: 66.67%` and `--explorer-width: 320px` keep
+  the old default sizes. Obelisk's light palette overrides urui's
+  tokens on `:root`; urui's dark palette was already obelisk's.
+- The stylesheet stays a linked `app.css`, not inlined.
+
+**Lost, owed to W11.4:** the `<link rel="icon">` — urui's `<head>` has
+no consumer slot. W11.4 adds it from javascript at boot, and puts back
+the `/apps/obelisk/favicon.ico` needle that
+`test-sail-shell-landmarks-and-controls-66` lost, against `app.js`.
+
+The ship run failed 17 needles in four suites pinned to the old markup
+and css (66, 67, 73, 74). Each was moved to the new contract — e.g.
+`schema-pane` → `explorer-pane`, `help-btn` → `id="help"`,
+`docs-help-tree` → `docs-help-nav`, `prefers-color-scheme: dark` →
+`data-effective-theme='dark'`, `.editor-tab-*` → `.document-tab-*`,
+`schema-panel` → `schemas-panel` — and 67 gains `.result-collapsed`.
+Two negatives about urui-owned tab css were dropped with the rules
+they guarded.
+
+**The page and the old `app.js` do not work together.** The old script
+binds ids that are gone (`#schema-pane`, `#help-btn`, the explorer
+tabs) and runs no urui runtime; deploy W11.3 only together with W11.4.
+
+Verify: new arm `test-web-page-shell-09-a` (18 structural needles) plus
+09–12 and 14 and the W11.2 arms pass through `bin/hoon-test.js` on a
+stubbed scratch desk; a Chromium render of the compiled page, css, and
+a stub boot of `core:urui-js` shows the frame in light, dark, rows,
+columns, collapsed output, and the help panel with no console errors.
 
 #### W11.4 — JavaScript onto the runtime
 
