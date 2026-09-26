@@ -84,6 +84,10 @@
           ==
           use-worker=|
       ==
+      ::  columns, so a fresh session proves the default; the result
+      ::  pane collapses, so the control is proved for every consumer
+      layout=%columns
+      collapse=&
   ==
 ::
 ++  slots
@@ -116,6 +120,7 @@
       ['preferences.layout' %urui %scalar ~]
       ['preferences.keybindings' %urui %scalar ~]
       ['paneHeight' %urui %scalar ~]
+      ['resultOpen' %urui %scalar ~]
   ==
 ::
 ++  shortcuts

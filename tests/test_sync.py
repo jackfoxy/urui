@@ -71,7 +71,8 @@ class SyncTests(unittest.TestCase):
         shared = (
             "ace.js", "theme-github.js", "theme-monokai.js",
             "ext-beautify.js", "ext-prompt.js", "ext-searchbox.js",
-            "ext-settings-menu.js", "license.txt", "README.md",
+            "ext-settings-menu.js", "keybinding-vim.js", "license.txt",
+            "README.md",
         )
         source = self.source / "desk/web/ace"
         target = self.dest / "desk/web/ace"

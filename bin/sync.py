@@ -13,7 +13,7 @@ STATE = ".urui-sync.json"
 ACE = (
     "ace.js", "theme-github.js", "theme-monokai.js", "ext-beautify.js",
     "ext-prompt.js", "ext-searchbox.js", "ext-settings-menu.js",
-    "license.txt", "README.md",
+    "keybinding-vim.js", "license.txt", "README.md",
 )
 
 

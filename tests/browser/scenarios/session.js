@@ -10,7 +10,8 @@ module.exports = async (env) => {
 
   assert.equal(appId.storageKey, 'urui-fixture.session.v1');
   assert.equal(appId.storageVersion, 1);
-  assert.equal(slots.length, 21);
+  assert.equal(slots.length, 25);
+  assert.equal(slots.find((slot) => slot.key === 'resultOpen').owner, 'urui');
   assert.equal(slots.find((slot) => slot.key === 'source').owner, 'app');
   assert.equal(slots.find((slot) => slot.key === 'docsTabs').shape, 'tabs');
   assert.equal(slots.find((slot) => slot.key === 'view').owner, 'app');

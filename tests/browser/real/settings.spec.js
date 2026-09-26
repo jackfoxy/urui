@@ -152,3 +152,94 @@ test('each format keeps its own divider position', async ({page}) => {
   expect(await editorWidth()).toBe(widthAfter);
   expect(await editorHeight()).toBe(heightAfter);
 });
+
+//  `layout` is the consumer's starting format.  The fixture declares
+//  columns, so the rows case rewrites the served config: this proves the
+//  runtime reads the field, and urui-shell's hoon suite proves the page
+//  is drawn in it.
+test('a configured screen format starts a fresh session, a saved one wins',
+  async ({page}) => {
+    await page.route('**/apps/urui-fixture/app.js', async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text())
+        .replace('"layout":"columns"', '"layout":"rows"');
+      await route.fulfill({response, body});
+    });
+    await open(page);
+    const workspace = page.locator('#workspace');
+    await expect(workspace).toHaveAttribute('data-layout', 'rows');
+    await expect(page.locator('#splitter'))
+      .toHaveAttribute('aria-orientation', 'horizontal');
+
+    await page.locator('#settings').click();
+    await page.locator('#layout-columns').click();
+    await page.keyboard.press('Escape');
+    await page.reload();
+    await expect(workspace).toHaveAttribute('data-layout', 'columns');
+  });
+
+test('the result pane collapses to its heading in either format',
+  async ({page}) => {
+    await open(page);
+    const workspace = page.locator('#workspace');
+    const pane = page.locator('#result-pane');
+    const control = page.locator('#result-collapse');
+    const splitter = page.locator('#splitter');
+    const editorWidth = () => page.evaluate(() => {
+      return document.querySelector('#workspace').style
+        .getPropertyValue('--editor-width');
+    });
+
+    //  The control is the last action in the result heading.
+    await expect(control).toHaveCount(1);
+    await expect(page.locator('#result-pane-head .pane-actions > :last-child'))
+      .toHaveId('result-collapse');
+    await expect(control).toHaveAttribute('aria-expanded', 'true');
+    await expect(control).toHaveAttribute('aria-label',
+      'Collapse Fixture result');
+    await expect(control).toHaveText('›');
+
+    await splitter.press('ArrowRight');
+    const width = await editorWidth();
+
+    //  Columns: a rail holding only the control, the splitter idle.
+    await control.click();
+    await expect(control).toHaveAttribute('aria-expanded', 'false');
+    await expect(control).toHaveAttribute('aria-label',
+      'Expand Fixture result');
+    await expect(control).toHaveText('‹');
+    await expect(pane).toHaveClass(/collapsed/);
+    await expect(workspace).toHaveClass(/result-collapsed/);
+    await expect(splitter).toHaveClass(/inactive/);
+    await expect(page.locator('#result-pane-tabs')).toBeHidden();
+    await expect(page.locator('#result-status')).toBeHidden();
+    const rail = await pane.boundingBox();
+    expect(rail.width).toBeLessThan(64);
+    await splitter.press('ArrowRight');
+    expect(await editorWidth()).toBe(width);
+
+    //  Rows: the same state, now a strip under the editor.
+    await page.locator('#settings').click();
+    await page.locator('#layout-rows').click();
+    await page.keyboard.press('Escape');
+    await expect(control).toHaveText('⌃');
+    await expect(pane).toHaveClass(/collapsed/);
+    await expect(page.locator('#result-status')).toBeVisible();
+    const strip = await pane.boundingBox();
+    const editor = await page.locator('#editor-pane').boundingBox();
+    expect(strip.height).toBeLessThan(editor.height / 4);
+    expect(strip.y).toBeGreaterThanOrEqual(editor.y + editor.height - 1);
+
+    //  The state survives a reload, and expanding restores the divider.
+    await page.reload();
+    await expect(control).toHaveAttribute('aria-expanded', 'false');
+    await expect(pane).toHaveClass(/collapsed/);
+    await control.click();
+    await expect(control).toHaveText('⌄');
+    await expect(pane).not.toHaveClass(/collapsed/);
+    await expect(splitter).not.toHaveClass(/inactive/);
+    await page.locator('#settings').click();
+    await page.locator('#layout-columns').click();
+    await page.keyboard.press('Escape');
+    expect(await editorWidth()).toBe(width);
+  });

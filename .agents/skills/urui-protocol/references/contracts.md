@@ -23,6 +23,8 @@ Column key: **Hoon** = the mold field in `sur/urui.hoon`; **json** = the key
 | `share-param` | `shareParam` | `++share-json` | shared-source banner | absent ⇒ `decodeSource` throws |
 | `permanent-views` | `permanentViews` | `++view-json` | explorer banner | empty ⇒ compact frame, no explorer |
 | `ace-spec` | `ace` | `++ace-json` | `++config-js:urui-ace` only | the runtime never reads it |
+| `layout` | `layout` | `++config-json` | `let layout` in the shell-frame banner; `++full` draws `#workspace[data-layout]` and the splitter's orientation from it | the starting screen format; a saved `preferences.layout` wins |
+| `collapse` | `resultCollapse` | `++config-json` | `++heading-band` emits `#result-collapse` as the result pane's last action; `applyResultLayout` | bunts to `|`; without the control a saved `resultOpen: false` is ignored |
 
 `++number` emits `@ud` with `scot`'s dot separators stripped — json numbers
 cannot carry them. A `(unit @t)` becomes json `null`, never an empty string.
@@ -104,7 +106,7 @@ containing `.` writes a nested object (`preferences.theme`).
 | `%tabs` | the kind's tab list; each entry must match `{kind}-{n}`, carry a valid source and path, and be unique by id and by path; `options.tabs[kind].validate(candidate, base, seen)` may extend or veto | only the literal keys `docsTabs` and `refTabs` are recognised |
 | `%active` | the kind's active id; kept only if it is one of the accepted ids, else the first tab | — |
 | `%next` | the kind's counter, raised to `highestId(tabs)` | `nextDocs` / `nextRef`, same rule |
-| `%scalar` | — | dispatched by key: `paneWidth` (clamped), `explorerWidth` (floored), `explorerOpen` (anything but `false` is open), `explorerView` (must be an available view), `explorerOrder` (filtered and completed), `preferences.theme` (`validTheme`) |
+| `%scalar` | — | dispatched by key: `paneWidth` (clamped), `explorerWidth` (floored), `explorerOpen` and `resultOpen` (anything but `false` is open), `explorerView` (must be an available view), `explorerOrder` (filtered and completed), `preferences.theme` (`validTheme`) |
 | `%record` | — | no urui meaning; for `%app` slots |
 
 A `%urui` slot whose key is not in that list falls through to `default:` and

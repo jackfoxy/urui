@@ -371,6 +371,10 @@ user will run the full gate.
 
 ## Phase 8 — obelisk adoption, increment 1
 
+**Superseded 2026-09-25** by the rewritten Phase 11 in
+`pane-model-plan.md`, which absorbs W8.1, W8.3, and W8.5 and drops W8.2.
+Kept below for history.
+
 Prereq: Phases 0–7 complete and released. Scope estimates below are
 provisional until W8.1 resolves A-OBELISK.
 

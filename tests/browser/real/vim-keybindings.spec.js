@@ -78,11 +78,13 @@ test('choosing Vim installs the keymap and Ace restores it', async ({
   //  Ace default is the absence of a handler, not a handler named ace.
   expect(await keymapId(page)).toBe(null);
 
+  //  polled: Ace fetches the vim module on first use, so the handler
+  //  lands a moment after the preference does
   await chooseKeymap(page, 'vim');
-  expect(await keymapId(page)).toBe('ace/keyboard/vim');
+  await expect.poll(() => keymapId(page)).toBe('ace/keyboard/vim');
 
   await chooseKeymap(page, 'ace');
-  expect(await keymapId(page)).toBe(null);
+  await expect.poll(() => keymapId(page)).toBe(null);
 });
 
 test('Vim normal mode runs motions, operators, and insert', async ({

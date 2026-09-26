@@ -13,6 +13,7 @@ desk/web/ace/ext-beautify.js
 desk/web/ace/ext-prompt.js
 desk/web/ace/ext-searchbox.js
 desk/web/ace/ext-settings-menu.js
+desk/web/ace/keybinding-vim.js
 desk/web/ace/license.txt
 desk/web/ace/README.md
 tests/browser/doubles/README.md

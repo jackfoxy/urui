@@ -289,7 +289,10 @@ module.exports = async (env) => {
   assert.equal(written.version, 1);
   assert.equal(written.source, 'saved body');
   //  a dotted slot key nests, it does not become a flat key
-  assert.deepEqual(written.preferences, {autoEcho: true, theme: 'dark'});
+  assert.deepEqual(written.preferences, {
+    autoEcho: true, theme: 'dark', layout: 'columns', keybindings: 'ace'
+  });
+  assert.equal(written.resultOpen, true);
   assert.equal(written['preferences.theme'], undefined);
   assert.deepEqual(Object.keys(written).filter((key) => {
     return key.startsWith('next');

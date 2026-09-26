@@ -6,9 +6,9 @@ in urui and migrates graph-viz and obelisk onto it.
 
 Follows the naming standard in `remaining-work-plan.md`
 (`## Phase <n> — Name`, `### W<phase>.<item> — Title`, `Scope:` tier +
-estimate). This document is the live plan for Phases 9–11; Phase 8
-(obelisk increment 1 — clay, css tokens, explorer, session slots) stays
-where it is and lands first.
+estimate). This document is the live plan for Phases 9–11. Phase 11 was
+rewritten 2026-09-25 and absorbs what remained of Phase 8 (obelisk
+increment 1); see §3.
 
 ---
 
@@ -166,22 +166,22 @@ compact or full frame by whether that level exists. See W9.3.
 
 ### 2.2 The three real panes, expressed
 
-**obelisk editor** — tabs first, then the simple heading bar:
+**obelisk editor** — tabs first, then the simple heading bar.  The tabs
+are obelisk's own, so the level is `%dynamic`, not `%documents`:
 
 ```
-[%tabs ~[[%script 'Query tabs' %documents `%urql ~ `'New query tab' & &]]]
-[%heading `'urQL' ~ save-copy-actions]
-[%panel 'query-editor' `ace-host editor-bodies]
+[%tabs ~[[%script 'Query tabs' %dynamic ~ ~ `'New query tab' & &]]]
+[%heading `'urQL' ~ markdown-toggle-save-copy-actions]
+[%panel 'editor-body' `ace-host previews]
 ```
 
-**obelisk output** — heading bar first, then three levels:
+**obelisk output** — heading bar first, then one command level; each
+command's Results/Messages view and its stacked result sets stay
+obelisk's own markup inside the panel (decided 2026-09-25):
 
 ```
-[%heading `'Output' `'output-status' save-copy-collapse-actions]
-[%tabs ~[[%command 'Command results' %dynamic ~ ~ ~ | |]
-         [%view 'Command output' %fixed ~ ~[[%results 'Results']
-                                            [%messages 'Messages']] ~ | |]
-         [%set 'Result sets' %dynamic ~ ~ ~ | |]]]
+[%heading `'Output' `'output-status' save-copy-actions]
+[%tabs ~[[%command 'Command results' %dynamic ~ ~ ~ | |]]]
 [%panel 'results' ~ ~]
 ```
 
@@ -227,13 +227,11 @@ declares a second, `%documents` level in the same read-only pane.
 
 ## 3. Goal 2 — the implementation plan
 
-Dependency: Phase 8 **minus W8.4** lands first, so obelisk is already on
-urui's clay, css, and session slots before Phase 11 gives it panes.
-**W8.4 (explorer adoption) is deleted from Phase 8 and folded into
-W11.1** — obelisk adopts `++explorer` and the pane model in one pass
-rather than adopting the old explorer and immediately rewriting it. Amend
-`remaining-work-plan.md` accordingly. Phases 9 and 10 do not depend on
-Phase 8 and may run in parallel with it.
+Dependency: none on Phase 8. The 2026-09-25 rewrite of Phase 11 absorbs
+it: W8.1's inventory is folded into W11.3–W11.5, W8.2 is dropped (obelisk
+keeps its own json file API, so `urui-clay` delegation buys nothing),
+W8.3 lands in W11.3, and W8.5 in W11.5. W8.4 had already moved into
+Phase 11 on 2026-09-15.
 
 The eight hoon files are copied into each consumer, so a urui release
 that changes `$shell-spec` breaks a consumer until that consumer's own
@@ -621,64 +619,256 @@ Scope: M — 4–6h.
 
 ### Phase 11 — obelisk adoption, increment 2
 
-Prereq: Phase 8 less W8.4 complete, Phase 9 released, Phase 10 proving
-the mold on a second consumer.
+Rewritten 2026-09-25; decisions in §8. Prereq: Phases 9 and 10 done.
 
-#### W11.1 — Explorer and reference pane, one pass
+obelisk takes urui's frame — header, Settings (theme, keybindings,
+screen format), three panes, splitter, explorer resizer and collapse,
+help panel, docs tabs, persistence, and an Ace editor in place of the
+textarea — and keeps every piece of its own behaviour: its json
+`/api/*` wire, schema tree and relation menu, file tree and dialogs,
+query and result tabs, markdown and html previews, run/parse, result
+paging and export, and `window.ObeliskWorkbench`. The default screen
+format is `rows`, editor above output.
+
+No urui-managed `$doc-kind` exists in obelisk. Its tab levels are
+`%dynamic` and its explorer views are named `schemas` and `files`, not
+`{kind}-files`, so urui's clay tree, document store, and file endpoints
+are never engaged; obelisk fills those surfaces with the code it
+already has.
+
+#### W11.1 — urui prerequisites (done 2026-09-25)
+
+Files: `bin/sync-manifest.txt`, `desk/sur/urui.hoon`,
+`desk/lib/urui-config.hoon`, `desk/lib/urui-js.hoon`,
+`desk/lib/urui-shell.hoon`, `desk/lib/urui-css.hoon`,
+`desk/tests/lib/urui-config.hoon`, `desk/tests/lib/urui-shell.hoon`,
+`tests/fixture/lib/urui-fixture-web.hoon`,
+`tests/browser/real/settings.spec.js`,
+`graph-viz/desk/lib/gviz-web.hoon`.
+
+- **Manifest.** Add `desk/web/ace/keybinding-vim.js`. W10.6 vendored it
+  but the manifest never gained it, so `sync.sh` does not copy it and
+  graph-viz's `.urui-sync.json` does not track it.
+- **Default screen format.** New `$app-config` field
+  `layout=?(%columns %rows)`, emitted as `layout`; the runtime starts
+  from `config.layout ?? 'columns'` instead of the literal at
+  `let layout`. A saved `preferences.layout` still wins. graph-viz and
+  the fixture set `%columns`; the tuple is positional, so both fail to
+  compile until they do.
+- **Result-pane collapse.** A collapse control in the result pane's
+  heading, emitted by urui, with a new `%urui %scalar` slot
+  `resultOpen` that `readSlot` and `loadSession` know by exact key.
+  Collapsed, the pane shrinks to its heading band — full width under
+  `rows`, a rail under `columns`, as the explorer collapses — and the
+  splitter goes inactive. The divider positions are untouched, so
+  expanding restores the old size.
+Verify: urui hoon suites; Chromium settings spec gains default-layout
+(fresh record starts `rows` when configured, a saved choice overrides
+it) and collapse cases (both formats, reload persistence, splitter
+inactive); purity; sync to graph-viz, graph-viz Chromium and node
+scenarios green; digests re-recorded.
+Done: a consumer can declare its starting format and its result pane
+collapses.
+Scope: M — 4–6h.
+
+Completed. `$app-config` ends `layout=screen-format collapse=$~(| ?)`:
+`+$screen-format` bunts to `%columns` and `collapse` bunts off, so the
+`%*`-over-bunt configs in the test suites opt into nothing. Beyond the
+plan: `++full` draws `data-layout` on `#workspace` and the splitter's
+`aria-orientation` from the config, so the first paint is already in
+the declared format; the collapse control is appended inside the
+heading's `.pane-actions`, making one if the consumer gave none, so it
+sits hard right with the consumer's own actions. Collapse css keys on
+`[data-role='result']`, not `.preview-pane`, which
+`test-shared-sections-exclude-app-rules` forbids. The manifest is
+generated from `ACE` in `bin/sync.py`, so the vim file was added there
+and in `tests/test_sync.py`. The fixture opts into collapse and
+persists `resultOpen`; graph-viz declares `%columns` and no collapse,
+and its copies of the `urui-config`/`urui-shell` suites were updated to
+match urui's.
+
+Two stale expectations already failing on HEAD were corrected: the
+node session scenario's slot count (21 → 25) and the runtime
+scenario's `preferences` record (now `layout` and `keybindings` too).
+`vim-keybindings.spec.js`'s first case raced Ace's lazy fetch of the vim
+module and failed about one run in three; it now polls.
+
+Verify: urui hoon suites via `bin/hoon-test.js` — config 11, shell 24
+(2 new), css 10, js 14, ace 3, clay 9, http 11, fixture-web 3; node
+scenarios 11/11; urui Chromium 65/65 (2 new in `settings.spec.js`);
+`test:shortcuts` 7/7, `test:assets` 2/2, `tests/test_sync.py` 11/11;
+purity clean. graph-viz: the four urui suites green in place, Chromium
+18/18, `test:shortcuts` 3/3, `test:assets` 2/2; `verify-sync --strict`
+reports every managed path in sync, flagging only the two
+`node_modules/.bin` playwright links. graph-viz's node smoke fails four
+scenarios on a null `addEventListener`, identically on its clean HEAD —
+pre-existing, not addressed here. Owed: `-test` on a ship for
+`/=graph-viz=/tests` and `/=urui-fixture=/tests`. Digests re-recorded
+in `~/FoxyLabs/urui`: graph-viz page
+`06b13bc101eb2ea71d4e56b0739a6e85f869a15fd387bc5e118adacd189440b6`
+(45732), css
+`18eb7ffb56d301b12d209339b50603a576569da562cc6a76299bda4c14661cef`
+(27125), javascript
+`2de0335c3680643e5b38de86eb2365bc0ade239c1c8676a6b2450b6be6b0b5a6`
+(186869); fixture page
+`61d651c3146dd94bcf51cc21ba4bc03dc4a232d5ae2c9cbd9bb46257fb5c100f`
+(10732), css
+`1ea052c0162b5db863706bdc336db6e42ebe8dd223bbc600e012def5780a3bdb`
+(21994), javascript
+`e210637801d9b37594ffe7d53a071070dac747ea474f412aa5ef12c5a871a229`
+(129888).
+
+#### W11.2 — Copy urui into obelisk; serve the assets (done 2026-09-25)
+
+Files: urui's managed paths (via `bin/sync.sh --dest ../obelisk`),
+`obelisk/desk/mar/js.hoon` (copied from urui by hand — not in the
+manifest), `obelisk/desk/app/obelisk-web.hoon`,
+`obelisk/desk/tests/lib/obelisk-web.hoon`.
+
+- The user oversees the sync; confirm obelisk's own `lib/test.hoon` is
+  untouched and `verify-sync.sh --strict` reports every path in sync.
+- `mar/js.hoon` is required: without it `|commit` rejects the vendored
+  `.js` files with `%no-cast-between %mime %js`.
+- Ford-import and route every `web/ace/` file under
+  `/apps/obelisk/ace/`, including `keybinding-vim.js` and
+  `obelisk-config.js` (`config-js:urui-ace`). The text mode is built
+  into `ace.js`, so no mode file is vendored.
+- Route `/apps/obelisk/doc.toc` from the existing `desk/doc.toc`;
+  urui's `parseDocsToc` already nests by indentation to any depth.
+- Every `/api/*` route and its json wire is unchanged.
+Verify: `-test /=obelisk=/tests ~`; new arms assert 200 and content
+type for each Ace route and `doc.toc`; an `ace-assets-routed` node test
+like graph-viz's fails when a vendored file has no route.
+Scope: M — 4–6h.
+
+Completed. The user copied urui's files by hand; every copied file is
+byte-identical to urui's. The copy had overwritten obelisk's
+`lib/test.hoon`, whose `parse-results`/`eval-results` obelisk's suites
+use; it was restored from git. `++ace-spec` and `++ace-config-js` land
+in `lib/obelisk-web.hoon` now rather than in W11.3, because the agent
+serves `obelisk-config.js` from them. The agent's static routes
+(`app.js`, `app.css`, `doc.toc`, the ten Ace files) are one `++assets`
+list answered by `asset-route:urui-http`; the page stays a special case
+because it is built from `our`. One visible difference: a query string
+on a static url is now ignored instead of 404ing. The node test is
+`obelisk/tests/ace-assets-routed.test.js`, run with `node --test`;
+obelisk has no package.json.
+
+Verify: new arms `test-web-ace-assets-12-a`,
+`test-web-ace-config-names-text-mode-12-b`, `test-web-doc-toc-12-c`;
+those three plus 09, 11, 12, and 14 pass through `bin/hoon-test.js` on a
+scratch copy of the desk with the agent's `/*` imports stubbed (the
+runner cannot read clay); urui's seven suites pass inside obelisk;
+`ace-assets-routed.test.js` 2/2. Owed: `-test /=obelisk=/tests ~` on a
+ship.
+
+#### W11.3 — Page and stylesheet from `$shell-spec`
 
 Files: `obelisk/desk/lib/obelisk-web.hoon`.
-Absorbs the deleted W8.4. Change: obelisk's own explorer — `#explorer-
-tabs`, `#schema-panel`, `#files-panel`, `#schema-tree`, `#files-tree`,
-and their javascript — is deleted and replaced by a reference pane whose
-`%tabs` band carries one `%views` level seeded `[%schemas 'Schemas']`
-`[%files 'Files']`. `#local-ship` becomes a `%label` band.
-`#schema-collapse` becomes the band toggle urui renders, and
-`#schema-resizer` becomes urui's explorer resizer. obelisk's script and
-result kinds get `refs=&`, so a saved script opens read-only in this pane.
-Verify: obelisk's schema-tree and file-tree browser checks, retargeted at
-urui's ids; the explorer width and open/closed state survive a reload.
-Done: no explorer markup or tree javascript remains in
-`obelisk-web.hoon`.
-Scope: L — ~1 day (was W8.4's L plus this item's M, less the adopt-then-
-rewrite duplication).
 
-#### W11.2 — Editor pane
+`++page` keeps its `our=@p` gate and returns
+`(build:shell (spec our))`. `++config`: `%obelisk`, storage key
+`obelisk.session.v1`, `kinds=~`, `layout=%rows`,
+`docs-root='/docs/d/obelisk/'`, one shortcut `['F5' 'run' %always]`,
+ace-spec mode `ace/mode/text`, and the slots listed in W11.5.
 
-Change: `.editor-tabs` + `#new-tab-btn` become one `%documents` level
-with `add=`'New query tab'``; `.editor-toolbar` (the `urQL` label plus
-the save and copy icons) becomes a `%heading` band listed **after** the
-`%tabs` band; the textarea, markdown preview, and html preview become
-the `%panel` band's `body`. The markdown source/preview toggle stays
-obelisk's own markup inside the heading's `actions`.
-Verify: obelisk browser checks for tab create/close/select and both
-preview modes.
+| Slot | Content |
+|---|---|
+| brand | the Obelisk home link |
+| toolbar | Default DB select, Run (F5), Parse, `#help` — no theme control |
+| reference pane | `%label` band with `@p`; `%tabs` with one `%views` level seeded `[%schemas 'Schemas'] [%files 'Files']`; panel |
+| editor pane | `%tabs` with a `%dynamic` level `%script`, `add='New query tab'`, close and reorder on; then `%heading` carrying the urQL label, markdown Source/Preview toggle, save and copy icons; `%panel` with the Ace host plus `#markdown-preview` and `#html-preview` |
+| result pane | `%heading` `Output` with save and copy icons (urui adds collapse); `%tabs` with a `%dynamic` level `%command`; `%panel` `results` |
+| dialogs | file dialog, relation menu, save context menu |
+| help | fallback links and the developer links, on urui's `#fallback-help-content` / `#docs-help-content` / `#docs-help-nav` ids |
+
+obelisk's own `#file-context-menu` is deleted; urui emits one with the
+same ids and menu items, and obelisk keeps wiring its actions.
+`#local-ship`, `#schema-collapse`, `#schema-resizer`, `#output-resizer`,
+`#output-collapse`, `#explorer-tabs`, and `#help-panel` markup go.
+
+`++css` composes all seven urui sections, then obelisk's own rules:
+schema tree, file tree rows, relation and save menus, results tables and
+pager, markdown and html preview, dialogs, status toast. Obelisk rules
+for the grid, resizers, header, help panel, and theme are deleted.
+Verify: page, `app.js`, `app.css` tests (09–12) still pass; visual check
+in both themes and both formats.
+Scope: L — 1 day.
+
+#### W11.4 — JavaScript onto the runtime
+
+Files: `obelisk/desk/lib/obelisk-web.hoon`.
+
+`++javascript` becomes `(emit:ucfg spec)`, `core:ujs`, then obelisk's
+tail, which boots through `window.urui.runtime(...)` and
+`window.urui.boot(...)` as graph-viz does.
+
+- **Editor.** `createAceEditorAdapter` on the panel's host replaces the
+  textarea: `getSource`/`setSource` for text, `getSelection`/
+  `setSelection` for the persisted selection and run-selected-text,
+  `replaceRange` for relation templates. `#editor-load-error` is
+  obelisk's. Keybindings follow urui's setting automatically.
+- **Query tabs.** `state.tabs` stays the source of truth.
+  `renderTabs` becomes `runtime.panes.set` on the `%script` level;
+  add, close, and select come back through `options.panes`
+  `onAdd`/`onClose`/`onSelect`. Draft and file naming, dirty tracking,
+  file tabs for saved results, and preview modes are unchanged.
+- **Output.** `renderCommandTabs` becomes `runtime.panes.set` on the
+  `%command` level; `renderCommand` fills
+  `runtime.panes.panel(...)`, keeping its Results/Messages switch and
+  stacked, paged result sets.
+- **Explorer.** `renderSchema` and `renderFiles` fill `#schemas-tree`
+  and `#files-tree`; `setExplorerView`, `explorerTabKeydown`, and the
+  docs-tab, docs-tree, and `/docs` probe code are deleted in favour of
+  urui's.
+- **Deleted, now urui's:** `applyLayout`, `narrowLayout`,
+  `beginResize`, `resizeKeydown`, `setHelpOpen`, the Escape chain in the
+  global keydown handler (relation and save menus close through
+  `shortcuts.onKeydown`), and the F5 listener (now a registered
+  `run` command).
+- `window.ObeliskWorkbench` keeps every member.
+Verify: manual pass over run, parse, multi-command and multi-result-set
+runs, paging, copy, export, open/save/save-as of scripts, save results
+in every format, markdown and html previews, relation menu templates,
+file context menu, docs tabs, F5, Ace and Vim keybindings.
+Done: no layout, resizer, explorer-tab, or help-panel code remains in
+obelisk's javascript.
+Scope: L — 1–2 days.
+
+#### W11.5 — Persistence in urui's record
+
+Files: `obelisk/desk/lib/obelisk-web.hoon`.
+
+obelisk moves from `sessionStorage` `obelisk.workbench.v1` to urui's
+localStorage record, so tabs survive closing the browser as graph-viz's
+do. No migration: the old value dies with the browser tab anyway.
+
+| Slot | Owner | Shape |
+|---|---|---|
+| `workbench` — tabs, `activeId`, `nextDraft`, `nextFile`, `defaultDatabase`, `schemaExpanded`, `schemaDatabaseNames`, `filesCollapsed` | `%app` | `%record` |
+| `paneBands`, `panePaths` | `%urui` | `%record` |
+| `paneWidth`, `paneHeight`, `resultOpen` | `%urui` | `%scalar` |
+| `explorerWidth`, `explorerOpen`, `explorerView`, `explorerOrder` | `%urui` | `%scalar` |
+| `docsTabs` / `nextDocs` | `%urui` | `%tabs` / `%next` |
+| `preferences.theme`, `preferences.layout`, `preferences.keybindings` | `%urui` | `%scalar` |
+
+`options.session.read('workbench')` captures the editor and returns the
+record; `validate` keeps `validTab` and the existing repairs
+(`savedText`, `resultView`, active id). `schemaSize`, `outputRatio`,
+`schemaOpen`, `outputOpen`, `explorerView`, and `docsTabs` leave
+obelisk's state — urui owns them now. The `beforeunload` capture stays.
+Verify: close and reopen the browser — tabs, text, selection, active
+tab, default database, schema and file expansion, explorer and divider
+sizes, output collapse, theme, format, and keybindings all return.
 Scope: L — ~1 day.
 
-#### W11.3 — Output pane and its three levels
+#### W11.6 — Gate
 
-Change: `#output-heading` + the save/copy/collapse icons become a
-`%heading` band listed **before** the `%tabs` band. `renderCommandTabs`
-and the Results/Messages strip inside `renderCommand` are deleted;
-obelisk instead calls `runtime.panes.set` three times per run —
-`%command` from the command list, `%set` from the active command's
-result sets — and fills each innermost panel through
-`runtime.panes.panel`. The `%view` level is `%fixed` and needs no call.
-This is an intended **behavior change**, not only a refactor: today a
-command's several result sets are stacked vertically inside the Results
-panel: after this they are the third tab level. Single-result commands
-render one tab and look unchanged.
-Verify: single-command, multi-command, results-only, messages-only, and
-multi-result-set runs; the selected command, view, and result set all
-survive a reload.
-Done: no tab-strip construction remains in `obelisk-web.hoon`'s
-javascript.
-Scope: L — 1–2 days (the deepest change in the plan).
-
-#### W11.4 — Gate
-
-Verify: obelisk's hoon suites, its browser checks, and urui's purity gate
-(no `obelisk` string below `urui/desk/`).
-Scope: S — 2–3h.
+Verify: `-test /=obelisk=/tests ~`; urui's purity gate (no `obelisk`
+below `urui/desk/`); `verify-sync.sh --dest ../obelisk --strict`; the
+full W11.4 and W11.5 manual pass in both themes, both formats, and both
+keybindings; graph-viz unchanged since W11.1.
+Scope: M — 4–6h.
 
 ---
 
@@ -698,14 +888,15 @@ Scope: S — 2–3h.
 | W10.4 | M | 4–6h |
 | W10.5 | L | 1–2 days |
 | W10.6 | M | 4–6h |
-| W11.1 | L | ~1 day |
-| W11.2 | L | ~1 day |
-| W11.3 | L | 1–2 days |
-| W11.4 | S | 2–3h |
+| W11.1 | M | 4–6h |
+| W11.2 | M | 4–6h |
+| W11.3 | L | 1 day |
+| W11.4 | L | 1–2 days |
+| W11.5 | L | ~1 day |
+| W11.6 | M | 4–6h |
 
-Phase 9 ≈ 6–7 days, Phase 10 ≈ 2–3 days, Phase 11 ≈ 4–5 days. Total
-≈ 12–14 focused days, on top of Phase 8's ≈ 3–4 (W8.4's day moves into
-W11.1).
+Phase 9 ≈ 6–7 days, Phase 10 ≈ 2–3 days, Phase 11 ≈ 5–6 days, which now
+includes everything Phase 8 still owed.
 
 ## 5. Rollback points
 
@@ -716,9 +907,8 @@ W11.1).
 | W10.4 | revert the paired urui/graph-viz commits together |
 | W10.5 | revert the paired urui/graph-viz commits together |
 | W10.6 | revert the paired urui/graph-viz commits together |
-| W11.1 | obelisk-local; its own explorer returns intact |
-| W11.2 | obelisk-local; graph-viz unaffected |
-| W11.3 | obelisk-local; its javascript tab code returns intact |
+| W11.1 | revert the paired urui/graph-viz commits together |
+| W11.2–W11.6 | obelisk-local; revert obelisk to its pre-W11.2 commit, whose frame is self-contained |
 
 ## 6. Assumptions this plan makes
 
@@ -747,8 +937,20 @@ W11.1).
 | # | Question | Answer |
 |---|---|---|
 | 1 | Sources allowed in a read-only pane | anything the editor pane can open is importable as a read-only document; carried by the `%views` level's reference tabs |
-| 2 | Obelisk result sets as a third tab level | confirmed, accepted as a visible behavior change |
+| 2 | Obelisk result sets as a third tab level | confirmed, accepted as a visible behavior change — **reversed 2026-09-25**, see §8 |
 | 3 | Ship `@p` label | reference pane only, never the app header |
 | 4 | `emit:urui-config` signature | take `$shell-spec`; one call site per consumer |
 | 5 | Reveal scope | per-pane-per-band |
 | 6 | Obelisk explorer | W8.4 folded into W11.1; adopt explorer and panes in one pass |
+
+## 8. Decisions recorded 2026-09-25
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Obelisk functionality | every existing obelisk feature and api route stays as is; only the frame changes |
+| 2 | Ace mode for obelisk | `ace/mode/text`, for scripts and result files alike |
+| 3 | Obelisk persistence | everything in urui's localStorage record, as graph-viz does; tabs survive closing the browser; `sessionStorage` is no longer used |
+| 4 | Obelisk result sets | stay stacked inside the Results view; no third tab level (reverses §7 #2) |
+| 5 | Output collapse | urui gains a result-pane collapse (W11.1) rather than obelisk dropping its button |
+| 6 | Obelisk default screen format | `rows` — editor above output — via a new `$app-config` field |
+| 7 | Obelisk editor tabs | `%dynamic` levels driven by obelisk's own tab state, not `%documents`; no urui file endpoints |
