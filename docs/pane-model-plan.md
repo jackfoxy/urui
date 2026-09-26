@@ -841,7 +841,7 @@ stubbed scratch desk; a Chromium render of the compiled page, css, and
 a stub boot of `core:urui-js` shows the frame in light, dark, rows,
 columns, collapsed output, and the help panel with no console errors.
 
-#### W11.4 — JavaScript onto the runtime
+#### W11.4 — JavaScript onto the runtime (done 2026-09-25)
 
 Files: `obelisk/desk/lib/obelisk-web.hoon`.
 
@@ -880,6 +880,60 @@ file context menu, docs tabs, F5, Ace and Vim keybindings.
 Done: no layout, resizer, explorer-tab, or help-panel code remains in
 obelisk's javascript.
 Scope: L — 1–2 days.
+
+Completed. `++javascript` is now a gate of `our` — the emitted config
+carries the pane spec, and the spec carries the ship label — so the
+agent's `++assets` is a gate too. The old tail is `++app-js`.
+
+- **Editor.** `window.urui.editor.adapter` on `#query-editor`; a failed
+  mount shows `#editor-load-error` and a stand-in keeps every caller
+  working from the saved tab text. Selection is captured at the points
+  it was persisted before (change, tab switch, run, unload) rather than
+  on every keyup.
+- **Query tabs.** `renderTabs` hands `state.tabs` to
+  `runtime.panes.set` and selects `state.activeId`; the strip re-renders
+  on a dirty-mark flip, not on every keystroke. A click on a tab still
+  focuses the editor and arrow keys still keep focus on the strip — a
+  `pointerdown` flag tells `onSelect` which it was.
+- **Output.** One panel per command is still built and kept, so a
+  command's Results/Messages choice and result page survive switching;
+  only the strip is urui's. A single command, a parse, or an error
+  hides the `output-pane-tabs` band, as there was no strip before.
+  `revealOutput` is `runtime.layout.setResultOpen(true)`.
+- **Explorer.** urui has no view-change callback, so two
+  `MutationObserver`s — `#schemas-panel[hidden]` and the pane's
+  `collapsed` class — load the schema the first time it is on screen.
+- **Context menu.** obelisk drives urui's `#file-context-menu` by its
+  `hidden` attribute and leaves arrow keys to urui's own keydown (both
+  handlers would otherwise move focus twice). Its Escape handler moved
+  to window capture so it runs before urui's dispatcher and still
+  returns focus to the row's `…` button.
+- **Favicon** is appended to `<head>` at boot, and its needle is back,
+  against `app.js`.
+- `window.ObeliskWorkbench` keeps every member; the docs ones now
+  forward to `runtime.explorer.docs`.
+
+Obelisk's workbench state stays in `sessionStorage` here, minus the
+fields urui now owns; W11.5 moves it.
+
+Suites 68 and 69 pinned the old implementation's strings (`outputRatio:
+1 / 3`, `renderDocsHelpTree`, `event.key === 'F5'`, `editor-tab-close`)
+and were rewritten to the runtime contract; 74 swaps
+`lostpointercapture` and the removed `.command-tabs` rules for their
+replacements. One pre-existing behaviour is kept, not fixed: reloading
+with Files as the open view leaves Default DB empty until Schemas is
+shown, exactly as before.
+
+Verify: the 15 page, asset, and UI-contract arms pass through
+`bin/hoon-test.js` on the stubbed scratch desk; a Chromium pass against
+a mocked `/api` (36 checks, no page errors) covers boot, favicon, rows
+default, schema tree and default DB, typing and Run, single and
+multi-command output, F5, command-tab switching, add/select/close query
+tabs, a relation template, parse, file tree open, file context menu and
+Escape focus return, markdown preview, run disabled on a result tab,
+save context menu and Escape, collapse and re-expand on run, the vim
+keymap, help, and tabs surviving a reload. Owed: `-test
+/=obelisk=/tests ~` on a ship, and a pass against a real ship.
 
 #### W11.5 — Persistence in urui's record
 
