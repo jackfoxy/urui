@@ -935,7 +935,7 @@ save context menu and Escape, collapse and re-expand on run, the vim
 keymap, help, and tabs surviving a reload. Owed: `-test
 /=obelisk=/tests ~` on a ship, and a pass against a real ship.
 
-#### W11.5 — Persistence in urui's record
+#### W11.5 — Persistence in urui's record (done 2026-09-25)
 
 Files: `obelisk/desk/lib/obelisk-web.hoon`.
 
@@ -961,6 +961,31 @@ Verify: close and reopen the browser — tabs, text, selection, active
 tab, default database, schema and file expansion, explorer and divider
 sizes, output collapse, theme, format, and keybindings all return.
 Scope: L — ~1 day.
+
+Completed. `state` starts as `initialState()` and is replaced by the
+record `runtime.session.load()` returns; `validWorkbench` is the old
+`loadState` repair applied to the slot's raw value, and
+`options.session.read('workbench')` captures the editor before handing
+the state over. `persist()` is now `runtime.session.queue()` — urui's
+150 ms debounced save — and obelisk's own `beforeunload` handler is
+gone, since urui saves on unload and the read captures the editor.
+The workbench keeps its inner `version: 1`.
+
+One small loss: the old `sessionStorage` write showed "Session state
+could not be saved." when storage refused it; urui's save swallows
+storage errors by design (`saveSession`), so that toast no longer
+appears.
+
+Verify: suite 68 now asserts no `sessionStorage`, the `workbench` slot
+in the emitted config, and `validWorkbench(raw)`; the 15 page, asset,
+and UI arms pass on the stubbed scratch desk. A Chromium
+close-and-reopen pass (a new context seeded with the first one's
+storage state) restores all 18 items: tab count, texts, active tab,
+selection, dirty mark, default database, schema expansion, file-tree
+collapse, explorer width, divider, output collapse, theme, screen
+format, keybindings, and explorer view, with `sessionStorage` empty and
+the workbench in `obelisk.session.v1`. The W11.4 functional pass still
+reports 36/36. Owed: `-test /=obelisk=/tests ~` on a ship.
 
 #### W11.6 — Gate
 
