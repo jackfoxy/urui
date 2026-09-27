@@ -920,9 +920,15 @@ Suites 68 and 69 pinned the old implementation's strings (`outputRatio:
 1 / 3`, `renderDocsHelpTree`, `event.key === 'F5'`, `editor-tab-close`)
 and were rewritten to the runtime contract; 74 swaps
 `lostpointercapture` and the removed `.command-tabs` rules for their
-replacements. One pre-existing behaviour is kept, not fixed: reloading
-with Files as the open view leaves Default DB empty until Schemas is
-shown, exactly as before.
+replacements. Reloading with Files as the open view (or the explorer collapsed) left
+Default DB with no selection: the dropdown is filled from the schema,
+and the schema only loaded while its tree was on screen. The old UI had
+the same gate, but its explorer view died with the tab; persisted in
+localStorage (W11.5) it came back every time. Fixed 2026-09-26: boot
+calls `ensureSchemaLoaded({always: true})`, and the saved default is
+added as a placeholder option until the schema replaces the list.
+Verified by four new checks in the functional pass (41/41) and one in
+the close-and-reopen pass (19/19).
 
 Verify: the 15 page, asset, and UI-contract arms pass through
 `bin/hoon-test.js` on the stubbed scratch desk; a Chromium pass against
@@ -987,13 +993,38 @@ format, keybindings, and explorer view, with `sessionStorage` empty and
 the workbench in `obelisk.session.v1`. The W11.4 functional pass still
 reports 36/36. Owed: `-test /=obelisk=/tests ~` on a ship.
 
-#### W11.6 — Gate
+#### W11.6 — Gate (done 2026-09-25; ship `-test` owed)
 
 Verify: `-test /=obelisk=/tests ~`; urui's purity gate (no `obelisk`
 below `urui/desk/`); `verify-sync.sh --dest ../obelisk --strict`; the
 full W11.4 and W11.5 manual pass in both themes, both formats, and both
 keybindings; graph-viz unchanged since W11.1.
 Scope: M — 4–6h.
+
+Completed, except the one check only a ship can run.
+
+- **Purity:** `bin/check-purity.sh` clean; no `obelisk` below
+  `urui/desk/`.
+- **Sync:** `verify-sync.sh --dest ../obelisk --strict` reports all 18
+  `desk/` paths `in-sync` and exits 1 on the 8 test-support paths
+  outside `desk/` (`tests/browser/doubles/*`,
+  `ace-win-linux-shortcuts.json`). That is intended: the copy is
+  desk-only, obelisk has no node doubles suite, and
+  `tests/ace-assets-routed.test.js` is its own. There is no
+  `.urui-sync.json` in obelisk because the copy was manual; drift is
+  checked by content, and every desk file matches urui byte for byte.
+- **Behaviour:** the W11.4 functional pass (36/36) runs light, `rows`,
+  Ace keys; the W11.5 close-and-reopen pass (18/18) switches to dark,
+  `columns`, and Vim and proves each survives. Screenshots of the frame
+  in light, dark, rows, columns, collapsed output, and help were
+  reviewed in W11.3. No page errors in any run.
+- **Hoon:** the 15 page, asset, and UI-contract arms pass on the
+  stubbed scratch desk; urui's seven suites pass inside obelisk.
+- **graph-viz:** every synced file still `in-sync`; untouched since
+  W11.1.
+
+Owed: `-test /=obelisk=/tests ~` on a ship with the W11.3–W11.5
+changes, and a pass against a real ship's `/api`.
 
 ---
 
