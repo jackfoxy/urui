@@ -52,7 +52,23 @@ const selectors = [
   '#attr-fontname', '#attr-fontsize', '#attr-fontcolor',
   '#attr-change-all', '#attr-use-default',
   '#new-node-name', '#new-node-category', '#new-node-shape', '#add-node',
-  '#draw-edge'
+  '#draw-edge',
+  //  urui-fixture-docs: one store, `page`, and the document dialogs
+  '#page-editor', '#page-editor-load-error', '#page-preview',
+  '#page-open', '#page-save', '#page-save-as', '#page-copy', '#page-ref',
+  '#page-browse', '#page-display',
+  '#page-files-tab', '#page-files-panel', '#page-files-tree',
+  '#urui-file-dialog', '#urui-file-dialog-title', '#urui-file-dialog-help',
+  '#urui-file-dialog-root-field', '#urui-file-dialog-root',
+  '#urui-file-dialog-list', '#urui-file-dialog-path-field',
+  '#urui-file-dialog-path', '#urui-file-dialog-mark-field',
+  '#urui-file-dialog-mark', '#urui-file-dialog-extra',
+  '#urui-file-dialog-error', '#urui-file-dialog-cancel',
+  '#urui-file-dialog-confirm',
+  '#urui-confirm', '#urui-confirm-message', '#urui-confirm-cancel',
+  '#urui-confirm-ok',
+  '#urui-toast', '#urui-toast-message', '#urui-toast-details',
+  '#urui-toast-close'
 ];
 
 function createDom() {
@@ -268,6 +284,32 @@ function createDom() {
   elements['#file-context-menu'].hidden = true;
   elements['#clay-error-modal'].hidden = true;
   elements['#editor-load-error'].hidden = true;
+  //  the document Sail's own starting state
+  for (const name of [
+    '#page-editor-load-error', '#page-preview', '#page-display',
+    '#urui-file-dialog', '#urui-confirm', '#urui-toast',
+    '#urui-file-dialog-error', '#urui-toast-details'
+  ]) {
+    elements[name].hidden = true;
+  }
+  for (const [name, tag] of [
+    ['#urui-file-dialog-root', 'select'], ['#urui-file-dialog-mark', 'select'],
+    ['#urui-file-dialog-path', 'input'], ['#urui-file-dialog-cancel', 'button'],
+    ['#urui-file-dialog-confirm', 'button'], ['#urui-confirm-ok', 'button'],
+    ['#urui-confirm-cancel', 'button']
+  ]) {
+    elements[name].localName = tag;
+  }
+  for (const display of ['source', 'preview']) {
+    const button = new Element('button');
+    button.dataset.display = display;
+    elements['#page-display'].append(button);
+  }
+  elements['#urui-file-dialog'].append(
+    elements['#urui-file-dialog-root'], elements['#urui-file-dialog-path'],
+    elements['#urui-file-dialog-mark'], elements['#urui-file-dialog-cancel'],
+    elements['#urui-file-dialog-confirm']
+  );
 
   //  Each consumer seeds its own explorer strip: graph-viz's two file
   //  trees in `#explorer-tabs`, the fixture's in `#explorer-view-tabs`.
@@ -299,6 +341,7 @@ function createDom() {
     elements['#svg-files-panel'],
     elements['#text-files-panel'],
     elements['#note-files-panel'],
+    elements['#page-files-panel'],
     elements['#explorer-body']
   );
 
@@ -351,6 +394,11 @@ function createDom() {
       append(item) { this.children.push(item); }
     }),
     createElement: (name) => new Element(name),
+    createTextNode: (text) => {
+      const node = new Element('#text');
+      node.textContent = String(text);
+      return node;
+    },
     addEventListener: (name, callback) => {
       // Chain, do not replace: urui's own document listeners and a
       // consumer's coexist in a real browser, so they must here too.

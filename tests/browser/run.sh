@@ -29,4 +29,19 @@ fi
 node --check "$APP_JS"
 URUI_APP_JS="$APP_JS" node --test "$ROOT/tests/browser/urui-core.test.js"
 node "$ROOT/tests/browser/run-scenarios.js" "$APP_JS"
+
+# The store module runs against its own fixture, compiled the same way.
+DOCS_WORK="$(mktemp -d)"
+trap 'rm -rf "$DOCS_WORK" ${WORK:+"$WORK"}' EXIT
+DOCS_JS="$DOCS_WORK/app.js"
+node -e '
+  const {compileFixture} = require(process.argv[1]);
+  const fs = require("node:fs");
+  compileFixture("urui-fixture-docs")
+    .then((a) => fs.writeFileSync(process.argv[2], a.javascript))
+    .catch((cause) => { console.error(String(cause.message || cause));
+      process.exit(1); });
+' "$ROOT/tests/browser/serve-app.js" "$DOCS_JS"
+node --check "$DOCS_JS"
+node "$ROOT/tests/browser/run-scenarios.js" "$DOCS_JS" documents
 node --test "$ROOT/tests/browser/ace-config.test.js"

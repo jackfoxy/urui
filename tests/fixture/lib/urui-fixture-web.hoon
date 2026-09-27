@@ -88,6 +88,9 @@
       ::  pane collapses, so the control is proved for every consumer
       layout=%columns
       collapse=&
+      ::  the document tabs above are $doc-kind's; the store module has
+      ::  its own fixture, urui-fixture-docs
+      files=~
   ==
 ::
 ++  slots

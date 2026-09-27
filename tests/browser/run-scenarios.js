@@ -12,7 +12,13 @@ const {fork} = require('node:child_process');
 const scenarios = require('./scenarios/index.js');
 
 const application = process.argv[2];
-if (!application) throw new Error('usage: node run-scenarios.js APP_JS');
+if (!application) {
+  throw new Error('usage: node run-scenarios.js APP_JS [SET]');
+}
+//  `all` by default; `documents` runs against urui-fixture-docs
+const set = process.argv[3] || 'all';
+const names = scenarios[set];
+if (!Array.isArray(names)) throw new Error(`unknown scenario set: ${set}`);
 
 const runner = path.join(__dirname, 'run-scenario.js');
 
@@ -33,7 +39,7 @@ function runScenario(name) {
 
 (async () => {
   const failed = [];
-  for (const name of scenarios.all) {
+  for (const name of names) {
     if (!await runScenario(name)) failed.push(name);
   }
   if (scratch) fs.rmSync(scratch, {recursive: true, force: true});
@@ -42,5 +48,5 @@ function runScenario(name) {
     process.exitCode = 1;
     return;
   }
-  console.log(`urui browser: ok (${scenarios.all.length} scenarios)`);
+  console.log(`urui browser: ok (${names.length} ${set} scenarios)`);
 })();
