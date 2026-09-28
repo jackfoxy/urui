@@ -2,14 +2,16 @@
 
 Shared browser-UI shell for Urbit applications, in Hoon.
 
-urui is the frame that [graph-viz][gv] grew: a three-area workbench with a
-file explorer, document tabs, an Ace editor host, resizable panes, dialogs,
+urui is the frame that [graph-viz][gv] grew and [Obelisk][ob] adopted: a
+three-pane workbench with a file explorer, document stores and tabs backed
+by Clay, an Ace editor host, previews, resizable panes, dialogs, menus,
 theming, and a session record — with no opinion about what any of it
 displays. It is **source only**. There is no installable `%urui` desk and no
 production agent here; a consuming application copies urui's files into its
 own desk and builds one page from them.
 
 [gv]: https://github.com/jackfoxy/graph-viz
+[ob]: https://github.com/jackfoxy/obelisk
 
 ## What is here
 
@@ -22,41 +24,91 @@ desk/
     urui-js.hoon       the browser runtime, as cords
     urui-config.hoon   $app-config -> window.URUI_CONFIG
     urui-ace.hoon      $ace-spec -> the Ace loader script
-    urui-clay.hoon     clay path validation and browse listings
-    urui-http.hoon     eyre response helpers
-  web/ace/             the single Ace vendoring point (W3.4)
+    urui-files.hoon    the server half of the json file wire (Clay)
+    urui-http.hoon     asset lookup and eyre response helpers
+  mar/                 js, txt: what the desk needs to ingest the assets
+  web/ace/             the single Ace vendoring point
   tests/lib/           unit tests, run inside a staged desk
 tests/
-  fixture/             %urui-fixture: the consumer urui tests against
+  fixture/             %urui-fixture: the consumers urui tests against
   browser/             node doubles suite and Playwright, against the fixture
-bin/                   manual sync, fixture staging, and asset digests
+bin/                   manual sync, verification, fixture staging, digests
 ```
 
 Nothing in `desk/` names a consumer. The dependency direction is strictly
-consumer → urui, and a grep gate enforces it.
+consumer → urui, and `bin/check-purity.sh` enforces it.
 
-## Public contract
+## Quickstart: a consumer
 
-A consumer imports `sur/urui.hoon`, builds one `$app-config` for browser
-policy and one `$shell-spec` for markup, then composes the generated assets:
+The full contract is in
+[`.agents/skills/urui-protocol/references/`](.agents/skills/urui-protocol/references/):
+[contracts](.agents/skills/urui-protocol/references/contracts.md) (every
+field, json key, DOM id, and runtime call),
+[architecture](.agents/skills/urui-protocol/references/architecture.md)
+(ownership, build, load, and startup order),
+[extension workflows](.agents/skills/urui-protocol/references/extension-workflows.md),
+and [validation](.agents/skills/urui-protocol/references/validation.md).
+Graph Viz's `lib/gviz-web.hoon` and Obelisk's `lib/obelisk-web.hoon` are
+the complete consumers; `tests/fixture/lib/urui-fixture-docs.hoon` is the
+smallest.
 
-| Surface | Consumer supplies | urui supplies |
-|---|---|---|
-| `urui-shell` | three `$area` records and application marl | `build` |
-| `urui-css` | ordered shared sections and application CSS | `compose` |
-| `urui-config` | `$app-config` | `window.URUI_CONFIG` via `emit` |
-| `urui-js` | boot hooks and application JavaScript | `core`, `runtime`, editor adapter |
-| `urui-ace` | `$ace-spec` | the vendored Ace loader configuration |
-| `urui-clay` / `urui-http` | storage and authentication policy | path, browse, asset, and response helpers |
+1. **Sync the sources** into the consumer checkout (below), and import them:
 
-The browser bundle order is load-bearing: config, `core:urui-js`, any mode
-code, then the consumer tail that calls `window.urui.boot(...)`. The runtime
-owns generic tabs, explorer views, dialogs, layout, persistence, Clay file
-operations, shortcuts, and editor adapters. The consumer owns document
-semantics, rendering, application controls, application session slots, and
-the hook implementations. See
-[`tests/fixture/lib/urui-fixture-web.hoon`](tests/fixture/lib/urui-fixture-web.hoon)
-for the smallest complete consumer.
+   ```hoon
+   /-  urui
+   /+  shell=urui-shell, ucss=urui-css, ujs=urui-js
+   /+  ucfg=urui-config, uace=urui-ace, ufiles=urui-files, uhttp=urui-http
+   ```
+
+2. **Declare the document stores** as a `files:urui`: one store per kind of
+   document, each with its Clay roots (scope, marks, whether the user saves
+   there), a default display, its file actions, and the explorer trees
+   that browse it.
+
+3. **Build one `$app-config`**: the `app-id` (name, title, base url,
+   localStorage key and version), `limits`, the session `slots` (urui's
+   named slots plus `%app` slots the consumer validates), `shortcuts`,
+   `statuses`, the `ace-spec`, the starting `layout`, and `files`.
+
+4. **Build one `$shell-spec`**: that config, the `brand`, `toolbar`, `help`,
+   `dialogs`, and `head` marl, the styles and scripts, and three
+   `$pane`s — reference, editor, result. A pane is an ordered stack of
+   bands (`%tabs`, `%heading`, `%controls`, `%label`, `%panel`); a
+   `%tabs` band's levels are `%views` (the explorer), `%documents` (one
+   store, by `kind`), `%fixed`, or `%dynamic`. A `%panel` band carries the
+   `$editor` host `[id label mode]` its store's Ace editor mounts into.
+   A pane is `%read-write` or `%read-only`.
+
+5. **Compose the assets** and serve them:
+
+   ```hoon
+   ++  page        (crip (en-xml:html (build:shell spec)))
+   ++  css         (rap 3 ~[(compose:ucss sections) app-css])
+   ++  javascript  (rap 3 ~[(emit:ucfg spec) core:ujs app-js])
+   ```
+
+   The Ace files come from `web/ace/` with the loader from `urui-ace`; the
+   agent looks GET routes up with `asset-route:uhttp`.
+
+6. **Serve the file wire** from the agent: build a policy once with
+   `(make-policy:ufiles files /data/<app> strict)`, answer the
+   authenticated POST route named by `files.url` with `handle:ufiles`, and
+   pass `on-arvo` signs to `take:ufiles`.
+
+7. **Boot in the browser**, in `app-js`:
+
+   ```js
+   const runtime = window.urui.runtime({documents: {/* domain hooks */}});
+   runtime.documents.previews.register('svg', factory);  // optional
+   runtime.shortcuts.register('run', run);
+   runtime.start((saved) => { /* read the %app slots */ });
+   window.urui.boot({onReady() {}, editor: {primary: () => editor}});
+   ```
+
+   `runtime.start` wires the frame, restores the session, draws the
+   explorer, and starts the stores. urui owns tabs, files, dialogs,
+   previews, menus, keyboard, focus, and feedback; the consumer owns
+   its domain: rendering, commands, results, and app session fields.
 
 ## Ownership and synchronization
 
@@ -65,7 +117,7 @@ for the smallest complete consumer.
 | `desk/sur/urui.hoon`, `desk/lib/urui-*.hoon` | urui | synced regular files |
 | `desk/web/ace/` shared assets | urui | synced regular files |
 | `tests/browser/doubles/`, Ace shortcut inventory | urui | synced test support |
-| `.urui-sync.json` | sync tool | generated checksum state |
+| `.urui-sync.json` | sync tool | generated: urui revision and checksums |
 | consumer app/lib/tests, modes, manifests | consumer | never overwritten |
 | `tests/fixture/` | urui test harness | never shipped to consumers |
 
@@ -73,9 +125,7 @@ for the smallest complete consumer.
 path list. The sync operation copies only those paths and removes only paths
 that it managed previously.
 
-## Using urui from an application
-
-Clone urui **beside** the consumer, then explicitly sync shared sources:
+Clone urui **beside** the consumer, then sync explicitly:
 
 ```bash
 bin/sync.sh --dest ../graph-viz
@@ -83,17 +133,17 @@ bin/verify-sync.sh --dest ../graph-viz --strict
 ```
 
 Consumers contain ordinary files and build without the sibling checkout.
-The generated `bin/sync-manifest.txt` lists only shared files; application
-sources and the consumer's own `lib/test.hoon` are never overwritten. It
-includes the shared Hoon contract and libraries, vendored Ace runtime, browser
-doubles, and Ace shortcut inventory. There is no watcher or automatic sync.
+There is no watcher or automatic sync. Edit shared files in urui, then sync.
 
-Edit shared files in urui, then sync manually. The consumer's
-`.urui-sync.json` records last-synced checksums so verification distinguishes
-`in-sync`, `stale`, `missing`, and `modified-locally`. Normal build scripts
-warn about drift; `--strict` makes drift or any symlink anywhere in the
-consumer checkout a release failure. Sync overwrites listed consumer copies,
-so inspect local modifications before syncing.
+The consumer's `.urui-sync.json` records the urui commit it came from
+(`-dirty` when urui had uncommitted changes) and the checksum of every
+synced file, so verification reports the revision and tells `in-sync`,
+`stale`, `missing`, and `modified-locally` apart. An older checksum-only
+file still verifies, with the revision `unrecorded`. `--strict` makes any
+drift a failure, and so is a symbolic link in a managed path, above one, or
+anywhere in the consumer's `desk/`; add `--all-symlinks` to reject links
+anywhere in the checkout. Sync overwrites listed consumer copies, so
+inspect local modifications first.
 
 Copy the consumer's `desk/` directly into its mounted desk and `|commit`.
 `stage-desk.sh` is needed only to assemble urui's disposable fixture desk.
@@ -101,8 +151,8 @@ Copy the consumer's `desk/` directly into its mounted desk and `|commit`.
 ## Testing
 
 urui is tested through `%urui-fixture`, a disposable consumer that uses every
-part of the contract and none of any real application's vocabulary: two
-document kinds, three areas, five chords, one endpoint set.
+part of the contract and none of any real application's vocabulary, and
+`urui-fixture-docs`, the smallest document-store consumer.
 
 The harness has four layers: `/tests/lib` exercises pure Hoon libraries;
 `%urui-fixture` proves the assembled desk and Gall boundary; Node doubles
@@ -169,57 +219,6 @@ is proved twice.
 100-row Ace Windows/Linux inventory. It is checksum-synced into consumers;
 the adjacent Node test accounts for 102 executions, 97 bindings, five
 exclusions, five duplicates, and the fixture's one override.
-
-## Status
-
-W3.1 extracts Clay path validation and browse JSON. Graph-viz consumes the
-shared library through synced source copies and retains only storage-policy
-wrappers. `file-path` accepts a root, raw path, and extension list: it keeps
-any listed suffix, otherwise appends the first extension, and rejects an
-empty list. A single-extension list preserves the previous consumer policy.
-HTTP adapters decode their header or body before calling these pure gates.
-
-W3.2 adds HTTP payload construction with exact content types and byte
-lengths, asset-table lookup, and consumer-defined authentication refusals.
-Graph-viz uses tables for GET assets and POST actions with common file
-validation. Its URLs, statuses, headers, and response bodies are preserved.
-
-W3.3 extracts the seven CSS sections. Compose `%tokens %controls %shell
-%explorer %tabs %dialogs %responsive`, then append application rules with
-`rap 3`. Base controls precede component overrides; `compose` itself adds
-no separators and preserves the requested order, including repetitions.
-Graph-viz retains preview, inspector, zoom, and fullscreen rules. Regrouping
-changes its CSS digest and its page digest because the page embeds CSS;
-the HTML outside the style block and the JavaScript remain byte-identical.
-
-W3.4 vendors the nine shared Ace files and generates each consumer's loader
-configuration from `$ace-spec`. `mode` and `exts` contain full Ace module
-ids; the consumer supplies its global name, base URL, version, themes and
-worker policy. Graph-viz keeps its DOT mode and configuration URL. The
-fixture can load a real text editor using the shared runtime.
-See [the accepted configuration diff](docs/w3.4-ace-config.md).
-
-W3.5 publishes the frozen `window.urui` API, one-shot boot dispatcher,
-parameterized theme bootstrap, and shared Ace editor adapter. Graph-viz
-composes the shared core before its application tail and supplies its
-behavior through boot hooks. The fixture exercises the same public contract.
-
-W3.6 emits every `$app-config` field as `window.URUI_CONFIG` and expands the
-shell to the explorer, workspace, document strips, resizers, help panel,
-context menu, and dialogs. Consumers now define their brand, controls,
-content, and extra dialogs as marl slots and build the page with
-`(build:shell spec)`. See [the Graph-reviewed page diff](docs/w3.6-page-diff.md).
-
-W4.2 moves the nine consumer-neutral Node scenarios and their browser doubles
-to urui. The fixture supplies traceable hooks for every public API group;
-Graph-viz keeps four application scenarios and consumes checksum-tracked
-copies of the shared doubles.
-
-W4.3 moves the generic browser runtime, both Ace editor adapters, and their
-real-browser specifications into urui. W4.4 makes the Ace Windows/Linux
-shortcut inventory and accounting test urui-owned. Graph-viz retains its
-application hooks, rendering behavior, mode, shortcuts, and reduced
-integration matrix.
 
 ## License
 

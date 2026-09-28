@@ -39,8 +39,31 @@ def manifest():
 
 
 def read_state(dest):
+    """The last sync's checksums and urui revision.
+
+    The current file is {"revision": ..., "files": {path: sha256}}; an
+    older one is the bare {path: sha256} map, with no revision.
+    """
     path = dest / STATE
-    return json.loads(path.read_text()) if path.exists() else {}
+    data = json.loads(path.read_text()) if path.exists() else {}
+    if isinstance(data.get("files"), dict):
+        return data["files"], data.get("revision")
+    return data, None
+
+
+def revision():
+    """urui's commit, with -dirty for uncommitted changes; None off git."""
+    def git(*args):
+        return subprocess.run(
+            ["git", "-C", str(ROOT), *args],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    try:
+        head = git("rev-parse", "HEAD")
+        dirty = git("status", "--porcelain")
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return head + ("-dirty" if dirty else "")
 
 
 def destination(dest, relative):
@@ -76,7 +99,7 @@ def synchronize(dest, paths):
             raise ValueError(f"source must be a regular file: {source}")
         checksums[relative] = digest(source)
         destination(dest, relative)
-    previous = read_state(dest)
+    previous, _ = read_state(dest)
     removed = []
     for relative in sorted(set(previous) - set(paths)):
         target = destination(dest, relative)
@@ -102,17 +125,22 @@ def synchronize(dest, paths):
     # Only prior manifest entries may be removed, never neighboring files.
     for target in removed:
         target.unlink()
-    # Store content hashes, not a revision pin: revision policy is external.
+    # Content hashes identify the files; the revision names their source.
+    # Pinning a revision stays a consumer decision.
+    source = revision()
     with tempfile.NamedTemporaryFile(mode="w", dir=dest, delete=False) as out:
         temporary = Path(out.name)
-        json.dump(checksums, out, indent=2, sort_keys=True)
+        json.dump({"revision": source, "files": checksums}, out,
+                  indent=2, sort_keys=True)
         out.write("\n")
     os.replace(temporary, dest / STATE)
-    print(f"synced {len(paths)} files into {dest}")
+    print(f"synced {len(paths)} files into {dest} from urui {source}")
 
 
-def verify(dest, paths, strict, quiet):
-    previous = read_state(dest)
+def verify(dest, paths, strict, quiet, all_symlinks):
+    previous, source = read_state(dest)
+    if not quiet:
+        print(f"{'revision':16} {source or 'unrecorded'}")
     failed = False
     for relative in sorted(set(paths) | set(previous)):
         source, target = ROOT / relative, destination(dest, relative)
@@ -131,10 +159,15 @@ def verify(dest, paths, strict, quiet):
         failed |= status != "in-sync"
         if not quiet or status != "in-sync":
             print(f"{status:16} {relative}")
+    # A managed path, or a directory above one, that is a link already
+    # failed above.  Strict also rejects links in the packaged desk; the
+    # rest of the checkout (node_modules/.bin, say) is not shipped.
     if strict:
-        for relative in symlinks(dest):
+        scope = dest if all_symlinks else dest / "desk"
+        prefix = "" if all_symlinks else "desk/"
+        for relative in symlinks(scope) if scope.is_dir() else []:
             failed = True
-            print(f"{'symlink':16} {relative}")
+            print(f"{'symlink':16} {prefix}{relative}")
     return int(strict and failed)
 
 
@@ -144,6 +177,9 @@ def main():
     parser.add_argument("--dest", type=Path, default=Path.cwd())
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--all-symlinks", action="store_true",
+        help="with --strict, reject links anywhere in the checkout")
     args = parser.parse_args()
     dest = args.dest.resolve()
     if dest == ROOT or ROOT in dest.parents or dest in ROOT.parents:
@@ -155,7 +191,8 @@ def main():
         if args.operation == "sync":
             synchronize(dest, paths)
             return 0
-        return verify(dest, paths, args.strict, args.quiet)
+        return verify(dest, paths, args.strict, args.quiet,
+                      args.all_symlinks)
     except (OSError, ValueError, subprocess.CalledProcessError) as cause:
         parser.exit(1, f"{cause}\n")
 
