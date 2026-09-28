@@ -150,7 +150,7 @@ every sign to `++take`.
 | `divider` | `divider` | 10 | `maxExplorerWidth` |
 | `pane-min` / `pane-max` | `paneMin` / `paneMax` | 25 / 70 | `--editor-width` clamp, percent |
 | `narrow` | `narrow` | 760 | `matchMedia` in the runtime — **duplicated** as `760px` in `++responsive:urui-css`; change both |
-| `max-source` | `maxSource` | 262144 | `validateSource`: session text, shared links |
+| `max-source` | `maxSource` | 262144 | `validateSource`: shared links; not applied to restored session text |
 
 ## 6. Session record and slots
 
@@ -177,6 +177,11 @@ saved.
 
 Restoration order inside `loadSession`: store tabs → docs tabs → ref tabs →
 everything else → `applySession` (urui's keys only) → return the record.
+
+A store tab restores whatever its size; only a non-string text or one with
+a null byte is dropped, and only that tab. A record of another `version` is
+discarded whole. A failed `saveSession` (storage full or disabled) shows one
+error toast per run of failures.
 
 ## 7. Shortcuts
 
