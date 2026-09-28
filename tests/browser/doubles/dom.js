@@ -27,6 +27,7 @@ const selectors = [
   '#add-svg-ref', '#browse-svg', '#load-svg', '#save-svg', '#fit',
   '#auto-render', '#theme', '#help',
   '#help-panel', '#editor-help-card', '#close-help',
+  '#settings', '#settings-modal', '#close-settings',
   '#fallback-help-content', '#docs-help-content', '#docs-help-nav',
   '#workbench', '#explorer', '#explorer-pane', '#editor-pane',
   '#preview-pane', '#result-pane',
@@ -288,6 +289,7 @@ function createDom() {
   }));
   elements['#auto-render'].checked = true;
   elements['#help-panel'].hidden = true;
+  elements['#settings-modal'].hidden = true;
   elements['#docs-help-content'].hidden = true;
   elements['#file-context-menu'].hidden = true;
   elements['#editor-load-error'].hidden = true;
@@ -306,7 +308,8 @@ function createDom() {
     ['#urui-file-dialog-root', 'select'], ['#urui-file-dialog-mark', 'select'],
     ['#urui-file-dialog-path', 'input'], ['#urui-file-dialog-cancel', 'button'],
     ['#urui-file-dialog-confirm', 'button'], ['#urui-confirm-ok', 'button'],
-    ['#urui-confirm-cancel', 'button']
+    ['#urui-confirm-cancel', 'button'], ['#close-help', 'button'],
+    ['#close-settings', 'button']
   ]) {
     elements[name].localName = tag;
   }
@@ -322,6 +325,11 @@ function createDom() {
     elements['#urui-file-dialog-mark'], elements['#urui-file-dialog-cancel'],
     elements['#urui-file-dialog-confirm']
   );
+  elements['#urui-confirm'].append(
+    elements['#urui-confirm-cancel'], elements['#urui-confirm-ok']
+  );
+  elements['#settings-modal'].append(elements['#close-settings']);
+  elements['#urui-toast'].setAttribute('aria-live', 'polite');
 
   //  Each consumer seeds its own explorer strip: graph-viz's two file
   //  trees in `#explorer-tabs`, the fixture's in `#explorer-view-tabs`.
@@ -363,9 +371,19 @@ function createDom() {
     });
   }
 
+  //  <body>'s direct children, as urui-shell's full frame lays them out:
+  //  the modals go inert around each other, the toast never does
+  const body = new Element('body');
+  body.append(
+    elements['#workbench'], elements['#settings-modal'],
+    elements['#help-panel'], elements['#urui-file-dialog'],
+    elements['#urui-confirm'], elements['#urui-toast']
+  );
+
   const document = {
     fullscreenElement: null,
     documentElement: new Element('html'),
+    body,
     querySelector: (selector) => {
       if (elements[selector]) return elements[selector];
       const panelFrame = selector.match(/^#([^ ]+) iframe$/);

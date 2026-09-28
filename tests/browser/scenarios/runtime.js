@@ -76,6 +76,8 @@ module.exports = async (env) => {
 
   //  dialogs
   assert.equal(runtime.dialogs.helpIsOpen(), false);
+  //  closing gives focus back to what held it: the toggle that opened it
+  env.elements['#help'].focus();
   runtime.dialogs.setHelpOpen(true);
   assert.equal(runtime.dialogs.helpIsOpen(), true);
   assert.equal(env.elements['#help']['aria-expanded'], 'true');

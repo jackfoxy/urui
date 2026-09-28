@@ -81,5 +81,5 @@ State these as gaps rather than assuming a test protects you.
 | `urui.<method>()` returns undefined | no hook installed for it, or `boot` has not run yet |
 | a saved session is ignored | `version !== storageVersion`; or a slot key `readSlot` does not know; or per-entry validation dropped it (bad id pattern, oversized text, duplicate path) |
 | a reference does not follow its tab | only store tabs with `refs=&` sync; an app reference kind updates through `runtime.explorer.refs.update` |
-| a shortcut does nothing | no handler registered for that `command`; or the `when` context is false; an open file or confirm dialog takes Escape first |
+| a shortcut does nothing | no handler registered for that `command`; or the `when` context is false; an open modal (help, settings, file or confirm dialog) swallows every bound chord |
 | a Hoon type failure in a consumer's config | `$app-config` is positional: a field added or removed upstream shifts everything after it. Bind an arm (`=/ cfg config`) before reaching into it |

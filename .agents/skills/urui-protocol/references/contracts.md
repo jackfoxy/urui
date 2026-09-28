@@ -195,11 +195,17 @@ primary modifier, `shift` and `alt` must match exactly.
 | `%no-editor` | none does |
 | `%preview` | `options.shortcuts.preview(event)` returns true |
 
-Dispatch is capture-phase on `document`. An open file or confirm dialog takes
-Escape and traps Tab first; then Escape closes, in order, settings → help →
-the file context menu. A binding with no registered handler is skipped. If
-nothing matched and focus is not in an editor,
-`options.shortcuts.onKeydown(event)` runs; `true` consumes the event.
+Dispatch is capture-phase on `document`. Help, settings, the file dialog, and
+the confirm dialog are modals, ranked in that order with the confirm on top.
+While any is open, the top one takes Escape (closing only itself) and traps
+Tab; a key matching a binding is swallowed and its handler does not run;
+`onKeydown` does not run; every other key reaches the modal. The rest of
+`<body>` is inert, except `aria-live` regions such as the toast. Closing a
+modal gives focus back to what held it when it opened, or to its toggle.
+With no modal open, Escape closes the file context menu. A binding with no
+registered handler is skipped. If nothing matched and focus is not in an
+editor, `options.shortcuts.onKeydown(event)` runs; `true` consumes the
+event.
 
 ## 8. DOM ids the runtime queries
 
