@@ -191,13 +191,14 @@ module.exports = async (env) => {
   // ---- an app action uses the file dialog with its own field ---------------
   const extra = new env.Element('select');
   const picking = docs.pickPath({
-    store: 'page', scope: ['exports'], title: 'Save output', extra, mark: false
+    store: 'page', scope: ['exports'], title: 'Save output', extra,
+    mark: false, value: 'runs/latest'
   });
   await env.tick();
   assert.equal(el('urui-file-dialog-title').textContent, 'Save output');
   assert.equal(el('urui-file-dialog-extra').children[0], extra);
+  assert.equal(el('urui-file-dialog-path').value, 'runs/latest');
   await reply(entries(['exports', 'report', 'txt']));
-  el('urui-file-dialog-path').value = 'runs/latest';
   el('urui-file-dialog-confirm').onclick();
   assert.deepEqual(await picking, ['exports', 'runs', 'latest', 'txt']);
   assert.equal(el('urui-file-dialog-extra').children.length, 0);
