@@ -68,7 +68,12 @@ const selectors = [
   '#urui-confirm', '#urui-confirm-message', '#urui-confirm-cancel',
   '#urui-confirm-ok',
   '#urui-toast', '#urui-toast-message', '#urui-toast-details',
-  '#urui-toast-close'
+  '#urui-toast-close',
+  //  graph-viz on urui's store module: `dot` and `svg`
+  '#dot-load-error', '#svg-source-load-error', '#svg-preview', '#svg-display',
+  '#dot-open', '#dot-save', '#dot-save-as', '#dot-ref', '#dot-browse',
+  '#svg-open', '#svg-save', '#svg-save-as', '#svg-copy', '#svg-ref',
+  '#svg-browse'
 ];
 
 function createDom() {
@@ -287,6 +292,8 @@ function createDom() {
   //  the document Sail's own starting state
   for (const name of [
     '#page-editor-load-error', '#page-preview', '#page-display',
+    '#dot-load-error', '#svg-source-load-error', '#svg-preview',
+    '#svg-display',
     '#urui-file-dialog', '#urui-confirm', '#urui-toast',
     '#urui-file-dialog-error', '#urui-toast-details'
   ]) {
@@ -300,10 +307,12 @@ function createDom() {
   ]) {
     elements[name].localName = tag;
   }
-  for (const display of ['source', 'preview']) {
-    const button = new Element('button');
-    button.dataset.display = display;
-    elements['#page-display'].append(button);
+  for (const toggle of ['#page-display', '#svg-display']) {
+    for (const display of ['source', 'preview']) {
+      const button = new Element('button');
+      button.dataset.display = display;
+      elements[toggle].append(button);
+    }
   }
   elements['#urui-file-dialog'].append(
     elements['#urui-file-dialog-root'], elements['#urui-file-dialog-path'],

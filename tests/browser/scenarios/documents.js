@@ -48,7 +48,8 @@ module.exports = async (env) => {
   assert(descendants(tree).some((node) => {
     return node.dataset?.path === 'pages/intro/md';
   }));
-  assert.equal(el('page-display').hidden, true, 'a draft has no preview');
+  assert.equal(el('page-display').hidden, false,
+    'a draft previews by its store\'s default mark');
 
   // ---- labels: drafts count up, reusing the lowest --------------------------
   const second = docs.create('page');
