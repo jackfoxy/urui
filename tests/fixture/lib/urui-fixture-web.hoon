@@ -272,9 +272,6 @@
   :*  id='editor'
       label='Text source editor'
       mode=''
-      wrap=&
-      read-only=|
-      max-bytes=262.144
   ==
 ::
 ++  result-pane
@@ -358,9 +355,6 @@
   :*  id='result-editor'
       label='Note source editor'
       mode='ace/mode/text'
-      wrap=&
-      read-only=|
-      max-bytes=262.144
   ==
 ::
 ++  help
@@ -638,18 +632,13 @@
   });
   const docs = runtime.documents;
   fixture.runtime = runtime;
-  runtime.wire();
-  if (!window.__URUI_DOUBLES_TEST__) {
-    const saved = runtime.session.load();
-    const toggle = document.querySelector('#auto-echo');
-    if (saved && toggle) toggle.checked = saved['preferences.autoEcho'];
-    //  the explorer's restored strip: docs and reference tabs come back
-    //  from the session
-    runtime.explorer.docs.render();
-    runtime.explorer.refs.render();
-    runtime.explorer.setView(runtime.explorer.view());
-    docs.start();
-    runtime.explorer.docs.refreshVariant();
+  if (window.__URUI_DOUBLES_TEST__) {
+    runtime.wire();
+  } else {
+    runtime.start((saved) => {
+      const toggle = document.querySelector('#auto-echo');
+      if (saved && toggle) toggle.checked = saved['preferences.autoEcho'];
+    });
   }
   //  under the doubles a scenario starts the stores itself
   const bindEditors = () => {

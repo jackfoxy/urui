@@ -63,9 +63,13 @@ toggle.
 | `%fixed` | exactly `fixed` |
 | `%dynamic` | whatever `runtime.panes.set(pane, level, tabs)` was last given for that parent path |
 
-`$editor` is `[id label mode wrap read-only max-bytes]`. `docMount` reads
-`id`, `label`, and `mode` (empty → `ace-spec.mode`); `wrap`, `read-only`, and
-`max-bytes` are emitted but not read by the runtime.
+`$editor` is `[id label mode]`. `docMount` reads all three (empty `mode` →
+`ace-spec.mode`). Ace always wraps. A store's editor is read-only when its
+`%documents` level sits in a `%read-only` pane (every tab, drafts included)
+or its tab's root has no `save`; a read-only adapter refuses `replaceRange`.
+A store in a `%read-only` pane also refuses save, Save As, delete, and
+`documents.update` text changes; its Save and Save As controls are hidden and
+the context menu's Delete is disabled.
 
 ## 3. `files`: stores, roots, trees
 
@@ -289,7 +293,9 @@ Also on the runtime object: `notify(message, {kind, sticky, details})`,
 `confirm(kind, detail)` (a promise of a boolean), `copy(text)`, and the
 groups `shortcuts`, `panes`, `theme`, `status`, `layout`, `explorer` (with
 `docs`, `refs`, `context`), `session` (including `encodeSource` /
-`decodeSource(encoded, spec)`), `dialogs`, `a11y`, and `wire`.
+`decodeSource(encoded, spec)`), `dialogs`, `a11y`, `start`, and `wire`.
+`explorer.onChange(fn)` calls `fn({view, open})` after every view switch and
+every collapse or expand, and returns an unsubscribe.
 
 `a11y.menu(menu, {onClose})` drives a consumer's role=menu of role=menuitem
 buttons: `open(source, event)` places it (at the pointer for a contextmenu

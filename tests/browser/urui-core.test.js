@@ -132,10 +132,10 @@ test('fixture hooks are forwarded through the public API', () => {
   );
 });
 
-test('missing hooks are safe and dialogs use browser fallbacks', () => {
+test('missing hooks throw; dialogs use browser fallbacks', () => {
   const {urui} = bootWithoutHooks();
-  assert.equal(urui.status('source', 'Ready'), undefined);
-  assert.equal(urui.tabs.active('text'), undefined);
+  assert.throws(() => urui.status('source', 'Ready'), /no status hook/);
+  assert.throws(() => urui.tabs.active('text'), /no tabs\.active hook/);
   assert.equal(urui.dialog.confirm('continue?'), true);
   assert.equal(urui.dialog.prompt('name?'), null);
 });

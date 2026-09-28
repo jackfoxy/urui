@@ -74,18 +74,17 @@ differs (Obelisk calls it last, Graph Viz runs its startup inside `onReady`).
 
 | Step | Call | Why here |
 | --- | --- | --- |
-| 1 | `const runtime = window.urui.runtime({...})` | builds the element map, panes, and stores; `options.documents` hooks are read later, so they may name functions defined below |
-| 2 | `runtime.wire()` | attaches every listener: capture-phase keydown, store actions and view toggles, theme, help, settings, context menu, drags, resize |
-| 3 | `runtime.session.load()` | validates the stored record, applies urui's slots (store tabs included), returns the whole record so the consumer can read its own |
-| 4 | `runtime.documents.start()` once | mounts each store's editor, adds a shared-link tab, gives every store a tab, shows each active one (`activate` with `restore: true`), and browses the trees |
+| 1 | `const runtime = window.urui.runtime({...})` | builds the element map, panes, and stores, and throws `urui config: …` on duplicate pane, level, or store ids, a `%documents` level naming no store, or a store bound by no level or by several; `options.documents` hooks are read later, so they may name functions defined below |
+| 2–4 | `runtime.start(restore)` once | wires every listener (`runtime.wire()`), loads the session (`runtime.session.load()`), lays out and draws the explorer, calls `restore(record)` with the app slots' record (undefined when nothing was saved), starts the stores (`runtime.documents.start()`: editors, a shared-link tab, a tab per store, `activate` with `restore: true`, tree browses), then checks for the docs site; returns the record. A consumer that needs a step between these runs them itself, as the docs fixture does |
 | 5 | `docs.editor(store)` | the adapter urui mounted, or a stand-in if Ace failed; bind domain `onChange` listeners here |
 | 6 | `runtime.shortcuts.register(command, handler)` | an unregistered command is skipped; urui registers `open:{store}`, `save:{store}`, `save-as:{store}` itself |
 | 7 | `window.urui.boot(hooks)` once | a second call throws `urui.boot called more than once`; it installs the hook table and calls `onReady(api)` synchronously |
 
-Before `boot`, every `window.urui.*` dispatch method returns `undefined`
-(`invoke` finds no hook), except `config`, `runtime`, `editor.adapter`, and
+A `window.urui.*` dispatch method with no hook behind it (before `boot`, or
+a hook the consumer did not install) throws `urui: no {group}.{method} hook
+installed`, except `config`, `runtime`, `editor.adapter`, and
 `dialog.confirm`/`dialog.prompt`, which fall back to `window.confirm` and
-`window.prompt`.
+`window.prompt`. `onReady` is optional.
 
 ## 5. Data and event flow
 
