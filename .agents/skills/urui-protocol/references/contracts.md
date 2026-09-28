@@ -278,9 +278,16 @@ path, label, clean, fields, activate, focus})`, `update(store, id, {text,
 label, fields})`, `select(store, id, choices)`, `close`, `open(store, path?)`,
 `save(store, {as})`, `remove`, `dirty`, `addRef`, `editor(store)`,
 `pickPath({store, scope, title, extra, mark, value})`,
-`previews.register(mark, {mount, show, hide, render})`,
-`trees.refresh(view?)`, `trees.show(view)`. urui registers `md` and `html`
-previewers itself.
+`previews.register(mark, factory)`, `trees.refresh(view?)`,
+`trees.show(view)`. urui registers `md` and `html` previewers itself.
+
+A previewer is a factory, not an object: `factory({host, store})` mounts
+one instance into that store's `{store}-preview` host and returns
+`{show(tab), hide(), dispose()}`. Each store gets its own instance per mark,
+built on first show, so two stores previewing one mark never share DOM.
+`factory.render(panel, text)` draws a reference. Registering a mark again
+disposes all of its instances and rebuilds the ones on screen. Anything
+but a function throws a `TypeError`.
 
 `open` and `save` never apply a late response over newer state. Opens of
 one store and path run one at a time. A reload whose tab was edited while

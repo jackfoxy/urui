@@ -62,6 +62,7 @@ const selectors = [
   '#page-open', '#page-save', '#page-save-as', '#page-copy', '#page-ref',
   '#page-browse', '#page-display',
   '#page-files-tab', '#page-files-panel', '#page-files-tree',
+  '#memo-editor', '#memo-editor-load-error', '#memo-preview', '#memo-display',
   '#urui-file-dialog', '#urui-file-dialog-title', '#urui-file-dialog-help',
   '#urui-file-dialog-root-field', '#urui-file-dialog-root',
   '#urui-file-dialog-list', '#urui-file-dialog-path-field',
@@ -296,6 +297,7 @@ function createDom() {
   //  the document Sail's own starting state
   for (const name of [
     '#page-editor-load-error', '#page-preview', '#page-display',
+    '#memo-editor-load-error', '#memo-preview', '#memo-display',
     '#note-display', '#note-preview', '#result-editor-load-error',
     '#dot-load-error', '#svg-source-load-error', '#svg-preview',
     '#svg-display',
@@ -314,7 +316,9 @@ function createDom() {
   ]) {
     elements[name].localName = tag;
   }
-  for (const toggle of ['#page-display', '#svg-display', '#note-display']) {
+  for (const toggle of [
+    '#page-display', '#svg-display', '#note-display', '#memo-display'
+  ]) {
     for (const display of ['source', 'preview']) {
       const button = new Element('button');
       button.dataset.display = display;

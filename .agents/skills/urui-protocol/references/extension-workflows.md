@@ -53,7 +53,7 @@ A document kind is data, not code:
 | a `$root` | the store's `roots`; the agent's policy follows automatically through `++make-policy`, but a mark without a stock codec needs one added to the policy |
 | a tree | a `%views` level `fixed` entry and a `$tree` naming that view |
 | an action | the store's `actions` list — urui emits and wires `{store}-{action}` |
-| a previewer for a mark | `runtime.documents.previews.register(mark, {mount, show, hide, render})` in the consumer; urui shows the view toggle for any tab whose mark has one |
+| a previewer for a mark | `runtime.documents.previews.register(mark, factory)` in the consumer, where `factory({host, store})` returns `{show, hide, dispose}` and `factory.render(panel, text)` draws a reference; urui shows the view toggle for any tab whose mark has one |
 | domain reaction | `options.documents[store]`: `activate`, `afterActivate`, `loaded`, `saved`, and `fields` for app data on a tab |
 
 **Hazards.** A store with no slots persists nothing. A `$tree` whose `view`

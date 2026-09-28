@@ -2,8 +2,10 @@
 ::
 ::  The smallest application urui's documents module runs in: no
 ::  $doc-kind, one store with a root the user saves into and a root only
-::  the application writes, one tree, and every file action.  Named after
-::  nothing real, like urui-fixture-web beside it.
+::  the application writes, one tree, and every file action.  A second
+::  store, `memo`, previews the same mark in the result pane, so two
+::  stores show one previewer side by side.  Named after nothing real,
+::  like urui-fixture-web beside it.
 ::
 /-  urui
 /+  shell=urui-shell, ucss=urui-css, ujs=urui-js
@@ -26,6 +28,16 @@
               actions=~[%open %save %save-as %copy %ref %browse]
               refs=&
               share=`['page' 12.288 16.384]
+          ==
+          :*  name=%memo
+              noun='Memo'
+              untitled='memo'
+              starter=''
+              ~[[/memos ~[%md] ~ &]]
+              preview=`%preview
+              actions=~
+              refs=|
+              share=~
       ==  ==
       ~[[view=%page-files store=%page scopes=~]]
   ==
@@ -136,7 +148,7 @@
           %+  pinned  %body
           :*  %panel
               'editor-body'
-              `['page-editor' 'Page source' '' & | 0]
+              `['page-editor' 'Page source' '']
               ~
           ==
       ==
@@ -149,8 +161,25 @@
       label='Docs fixture result'
       mode=%read-write
       kind=~
-      :~  (pinned %head [%heading `'Result' ~ ~])
-          (pinned %body [%panel 'result-body' ~ ~])
+      :~  %+  pinned  %tabs
+          :-  %tabs
+          :~  :*  name=%document
+                  label='Memos'
+                  source=%documents
+                  kind=`%memo
+                  fixed=~
+                  add=`'New memo'
+                  close=&
+                  reorder=&
+              ==
+          ==
+          (pinned %head [%heading `'Result' ~ ~])
+          %+  pinned  %body
+          :*  %panel
+              'result-body'
+              `['memo-editor' 'Memo source' '']
+              ~
+          ==
       ==
   ==
 ::
