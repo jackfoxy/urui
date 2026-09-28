@@ -30,7 +30,6 @@
           divider=10
           pane-min=25
           pane-max=70
-          narrow=760
           max-source=262.144
       ==
       slots
@@ -160,6 +159,7 @@
           '/apps/urui-fixture/ace/ext-settings_menu.js'
           '/apps/urui-fixture/app.js'
       ==
+      head=~
   ==
 ::
 ++  brand

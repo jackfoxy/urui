@@ -14,7 +14,7 @@ module.exports = async (env) => {
   assert.equal(api.config.limits.minExplorer, 180);
   assert.equal(api.config.limits.paneMin, 25);
   assert.equal(api.config.limits.paneMax, 70);
-  assert.equal(api.config.limits.narrow, 760);
+  assert.equal(api.config.limits.narrow, undefined);
 
   assert.equal(api.status('editor', 'Ready'), 'status');
   assert.deepEqual(Array.from(lastCall(env, 'shell', 'status').args), [

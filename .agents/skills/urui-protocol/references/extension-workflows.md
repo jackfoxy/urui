@@ -144,7 +144,7 @@ every consumer's `(compose ...)` list → `test-sections-cover-shared-rules`.
 **Hazards.** Consumers keep their old section list until they opt in.
 `--editor-width` / `--explorer-width` are declared in `%tokens` and
 rewritten inline by the layout section. `%responsive`'s `760px` duplicates
-`limits.narrow`. Classes the runtime toggles — `collapsed`,
+the runtime's `narrowMedia` query; not configurable. Classes the runtime toggles — `collapsed`,
 `explorer-collapsed`, `inactive`, `active`, `is-dragging` — must keep
 working.
 

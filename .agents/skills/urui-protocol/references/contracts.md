@@ -149,7 +149,6 @@ every sign to `++take`.
 | `min-explorer` | `minExplorer` | 180 | explorer width clamp |
 | `divider` | `divider` | 10 | `maxExplorerWidth` |
 | `pane-min` / `pane-max` | `paneMin` / `paneMax` | 25 / 70 | `--editor-width` clamp, percent |
-| `narrow` | `narrow` | 760 | `matchMedia` in the runtime — **duplicated** as `760px` in `++responsive:urui-css`; change both |
 | `max-source` | `maxSource` | 262144 | `validateSource`: shared links; not applied to restored session text |
 
 ## 6. Session record and slots
