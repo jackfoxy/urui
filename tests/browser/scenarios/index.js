@@ -9,6 +9,6 @@ const shell = [
 const app = [];
 
 //  Run against urui-fixture-docs, the store module's own fixture.
-const documents = ['documents'];
+const documents = ['documents', 'document-races'];
 
 module.exports = {shell, app, documents, all: [...shell, ...app]};

@@ -268,6 +268,13 @@ label, fields})`, `select(store, id, choices)`, `close`, `open(store, path?)`,
 `trees.refresh(view?)`, `trees.show(view)`. urui registers `md` and `html`
 previewers itself.
 
+`open` and `save` never apply a late response over newer state. Opens of
+one store and path run one at a time. A reload whose tab was edited while
+the load was out asks to discard again; declining returns the tab
+untouched. A tab closed while its load or save was out stays closed: `open`
+resolves `undefined`, and `save` writes the file, reports it, and resolves
+`undefined`. Edits made during a save stay dirty against the saved text.
+
 Also on the runtime object: `notify(message, {kind, sticky, details})`,
 `confirm(kind, detail)` (a promise of a boolean), `copy(text)`, and the
 groups `shortcuts`, `panes`, `theme`, `status`, `layout`, `explorer` (with

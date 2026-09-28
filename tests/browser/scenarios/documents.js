@@ -6,6 +6,8 @@
 
 const assert = require('node:assert/strict');
 
+const {fileWire} = require('./support.js');
+
 module.exports = async (env) => {
   const {elements, descendants} = env;
   const fixture = env.window.uruiDocsFixture;
@@ -14,26 +16,7 @@ module.exports = async (env) => {
   const docs = runtime.documents;
   const el = (id) => elements[`#${id}`];
 
-  //  The file wire answers each parked request with a json reply.
-  const reply = async (body, status = 200) => {
-    for (let wait = 0; wait < 8 && !env.requests.length; wait += 1) {
-      await env.tick();
-    }
-    const request = env.requests.shift();
-    assert(request, 'expected a file-wire request');
-    assert.equal(request.url, '/apps/urui-fixture/files');
-    request.resolve({
-      ok: status < 400,
-      status,
-      headers: {get: () => 'application/json'},
-      text: async () => JSON.stringify(body)
-    });
-    for (let wait = 0; wait < 4; wait += 1) await env.tick();
-    return JSON.parse(request.options.body);
-  };
-  const entries = (...paths) => {
-    return {ok: true, entries: paths.map((path) => ({path, kind: 'file'}))};
-  };
+  const {reply, entries} = fileWire(env);
 
   // ---- start: one draft, the tree loads both roots ----------------------
   let sent = await reply(entries(['pages', 'intro', 'md']));
