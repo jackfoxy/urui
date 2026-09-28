@@ -1,6 +1,5 @@
 desk/sur/urui.hoon
 desk/lib/urui-ace.hoon
-desk/lib/urui-clay.hoon
 desk/lib/urui-config.hoon
 desk/lib/urui-css.hoon
 desk/lib/urui-files.hoon

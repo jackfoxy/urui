@@ -21,23 +21,23 @@
   ==
 ::
 ++  test-editor-mounts
+  ::  urui mounts both hosts; the fixture binds what it mounted.
   =/  source  (trip app-js:web)
   ;:  weld
-    (expect !>((has "window.urui.editor.adapter" source)))
-    (expect !>((has "document.querySelector('#editor')" source)))
-    (expect !>((has "document.querySelector('#result-editor')" source)))
+    (expect !>((has "docs.editor('text')" source)))
+    (expect !>((has "docs.editor('note')" source)))
     (expect !>((has "fixture.editors = [editor, noteEditor]" source)))
     (expect !>((has "window.__URUI_EDITOR_TEST__ = editor" source)))
     (expect !>((has "window.__URUI_NOTE_EDITOR_TEST__ = noteEditor" source)))
+    (expect !>(?=(~ (find "window.urui.editor.adapter" source))))
   ==
 ::
 ++  test-editor-failure
-  =/  source  (trip app-js:web)
+  ::  Each host's load-error notice is urui's, not the fixture's.
+  =/  html  (trip page:web)
   ;:  weld
-    (expect !>((has "Source editors unavailable" source)))
-    (expect !>((has "failure.hidden = false" source)))
-    (expect !>((has "failure.title = String(cause)" source)))
-    (expect !>((has "primaryHost.hidden = true" source)))
-    (expect !>((has "noteHost.hidden = true" source)))
+    (expect !>((has "id=\"result-editor-load-error\"" html)))
+    (expect !>((has "Editor unavailable" html)))
+    (expect !>(?=(~ (find "Source editors unavailable" (trip app-js:web)))))
   ==
 --

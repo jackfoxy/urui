@@ -199,8 +199,12 @@ test.beforeEach(async ({context}) => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function macroSetItem(key, value) {
       if (key === 'urui-fixture.session.v1') {
-        const previous = JSON.parse(this.getItem(key) || 'null')?.source;
-        const next = JSON.parse(value)?.source;
+        //  the text a record holds is its active text tab's
+        const active = (record) => record?.textTabs?.find((tab) => {
+          return tab.id === record.activeTextTabId;
+        })?.text;
+        const previous = active(JSON.parse(this.getItem(key) || 'null'));
+        const next = active(JSON.parse(value));
         if (previous !== next) window.__URUI_PERSISTED_SOURCES__.push(next);
       }
       return setItem.call(this, key, value);

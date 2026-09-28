@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
 
 const {fixture} = require('./support.js');
 
-//  The shell runtime: theme, status, layout, and the two dialogs urui
-//  emits.  Everything here is driven through the fixture's runtime, so a
+//  The shell runtime: theme, status, layout, help, document tabs, the
+//  explorer, and persistence.  Everything here is driven through the fixture's runtime, so a
 //  contract change in `urui-js ++runtime` fails without a real consumer.
 
 module.exports = async (env) => {
@@ -84,44 +84,27 @@ module.exports = async (env) => {
   assert.equal(env.elements['#help-panel'].hidden, true);
   assert.equal(env.document.activeElement, env.elements['#help']);
 
-  runtime.dialogs.showError('clay says no');
-  assert.equal(runtime.dialogs.errorIsOpen(), true);
-  assert.equal(
-    env.elements['#clay-error-message'].textContent,
-    'clay says no'
-  );
-  assert.equal(env.document.activeElement, env.elements['#close-clay-error']);
-  runtime.dialogs.hideError();
-  assert.equal(env.elements['#clay-error-modal'].hidden, true);
-  assert.equal(env.document.activeElement, env.elements['#help']);
+  //  the Clay error modal is retired: file errors are toasts
+  assert.equal(runtime.dialogs.showError, undefined);
   //  ---- document tabs ----------------------------------------------
   //
-  //  The store is kind-parameterized over `config.kinds`; the fixture
-  //  supplies only what differs between Text and Note.
-  const tabs = runtime.tabs;
-  assert.deepEqual(tabs.kinds.map((kind) => kind.name), ['text', 'note']);
-  assert.equal(tabs.kind('text').leaf, 'txt');
+  //  The strips belong to the fixture's two stores; the fixture supplies
+  //  data, never how a tab behaves.
+  const docs = runtime.documents;
+  assert.deepEqual(app.api.config.files.stores.map((item) => item.name),
+    ['text', 'note']);
 
-  //  a path's last segment is the clay leaf, not a file name
-  assert.equal(tabs.label('text', ''), 'Untitled');
-  assert.equal(tabs.label('note', ''), 'Preview');
-  assert.equal(tabs.label('text', 'notes/txt'), 'notes.text');
-  assert.equal(tabs.label('text', 'txt'), 'txt');
-
-  const first = tabs.create('text', 'alpha');
+  const first = docs.create('text', {text: 'alpha'});
   assert.equal(first.id, 'text-1');
   assert.equal(first.label, 'Untitled');
   assert.deepEqual(first.selection, {start: 0, end: 0});
-  const second = tabs.create('text', 'beta', {path: 'notes/txt'});
+  const second = docs.create('text', {
+    text: 'beta', path: ['notes', 'txt'], hash: '0vnotes'
+  });
   assert.equal(second.id, 'text-2');
+  //  a path's last segment is the mark; labels show the display extension
   assert.equal(second.label, 'notes.text');
-  assert.equal(tabs.next('text'), 3);
-
-  tabs.select('text', first.id);
-  assert.equal(tabs.activeId('text'), first.id);
-  tabs.select('text', second.id);
-  assert.equal(tabs.activeId('text'), second.id);
-  assert.equal(tabs.active('text'), second);
+  assert.equal(docs.active('text'), second);
   const activated = env.fixture.calls.filter((call) => {
     return call.group === 'tabs' && call.method === 'activate';
   });
@@ -138,23 +121,27 @@ module.exports = async (env) => {
   assert.equal(controls[1].classes.has('active'), true);
   assert.equal(controls[1].children[0]['aria-selected'], 'true');
   assert.equal(controls[1].children[0].textContent, 'notes.text');
-  assert.equal(controls[1].children[1].textContent, 'X');
+  assert.equal(controls[1].children[1].textContent, '×');
   assert.equal(controls[0].draggable, true);
 
-  //  a dirty tab is marked O, and closing it asks first
-  second.source = 'edited';
-  tabs.render('text');
-  assert.equal(tabs.dirty('text', second), true);
-  assert.equal(strip.children[1].children[1].textContent, 'O');
-  env.confirmationAnswers.push(false);
-  tabs.close('text', second.id);
-  assert.equal(tabs.list('text').length, 2);
-  env.confirmationAnswers.push(true);
-  tabs.close('text', second.id);
-  assert.equal(tabs.list('text').length, 1);
-  assert.equal(tabs.activeId('text'), first.id);
+  //  a dirty tab is marked, and closing it asks first
+  docs.update('text', second.id, {text: 'edited'});
+  assert.equal(docs.dirty('text', second.id), true);
+  assert.equal(strip.children[1].children[1].textContent, '●');
+  let closing = docs.close('text', second.id);
+  await env.tick();
+  assert.equal(env.elements['#urui-confirm'].hidden, false);
+  env.elements['#urui-confirm-cancel'].listeners.click();
+  assert.equal(await closing, false);
+  assert.equal(docs.list('text').length, 2);
+  closing = docs.close('text', second.id);
+  await env.tick();
+  env.elements['#urui-confirm-ok'].listeners.click();
+  assert.equal(await closing, true);
+  assert.equal(docs.list('text').length, 1);
+  assert.equal(docs.active('text'), first);
 
-  //  the `+` control exists only for a kind that asked for one
+  //  the `+` control exists only for a store whose level asked for one
   const add = strip.children.at(-1);
   assert.equal(isAdd(add), true);
   assert.equal(add.children[0]['aria-label'], 'Add empty Text tab');
@@ -162,18 +149,13 @@ module.exports = async (env) => {
     env.elements['#result-pane-document-tabs'].children.some(isAdd),
     false
   );
-  const empty = tabs.addEmpty('text');
-  assert.equal(empty.source, '');
-  assert.equal(tabs.activeId('text'), empty.id);
+  add.children[0].listeners.click();
+  const empty = docs.active('text');
+  assert.equal(empty.text, 'fixture source');
+  assert.equal(empty.label, 'Untitled 2');
 
-  //  reordering keeps the array identity a consumer may hold
-  const held = tabs.list('text');
-  tabs.move('text', empty.id, first.id, false);
-  assert.deepEqual(held.map((tab) => tab.id), [empty.id, first.id]);
-  assert.equal(tabs.list('text'), held);
-
-  //  an unknown kind is a programming error, not a silent no-op
-  assert.throws(() => tabs.list('nope'), /unknown document kind: nope/);
+  //  an unknown store is a programming error, not a silent no-op
+  assert.throws(() => docs.list('nope'), /unknown document store: nope/);
   //  ---- explorer ----------------------------------------------------
   //
   //  One strip holds the permanent trees, documentation tabs and
@@ -223,56 +205,25 @@ module.exports = async (env) => {
   assert.deepEqual(toc[1].children.map((entry) => entry.title), ['Colors']);
   assert.equal(toc[1].children.length, 1);
 
-  //  reference tabs mirror a document and block a second one
-  const parent = tabs.list('text')[0];
-  parent.source = 'referenced body';
-  assert.equal(explorer.refs.can('text', parent.id), true);
-  explorer.refs.add('text', parent.id);
-  const ref = explorer.refs.list()[0];
+  //  a reference mirrors its document, and a second one shows the first
+  const parent = docs.list('text')[0];
+  docs.update('text', parent.id, {text: 'referenced body'});
+  const ref = docs.addRef('text', parent.id);
   assert.equal(ref.kind, 'text');
   assert.equal(ref.parentId, parent.id);
-  assert.equal(ref.source, 'referenced body');
-  assert.equal(explorer.refs.can('text', parent.id), false);
-  assert.equal(env.elements['#add-text-ref'].disabled, true);
+  assert.equal(ref.data.text, 'referenced body');
+  assert.equal(docs.addRef('text', parent.id), ref);
+  assert.equal(explorer.refs.list().length, 1);
   assert.equal(explorer.view(), ref.id);
   assert.equal(explorer.order().at(-1), ref.id);
 
   //  editing the parent updates the reference in place
-  parent.source = 'edited body';
-  explorer.refs.syncFromParent('text', parent.id);
-  assert.equal(explorer.refs.list()[0].source, 'edited body');
+  docs.update('text', parent.id, {text: 'edited body'});
+  assert.equal(explorer.refs.list()[0].data.text, 'edited body');
 
   explorer.refs.close(ref.id);
   assert.equal(explorer.refs.list().length, 0);
   assert.equal(explorer.order().includes(ref.id), false);
-  assert.equal(env.elements['#add-text-ref'].disabled, false);
-
-  //  the tree collapses a directory holding one leaf into one row
-  explorer.tree.render(['notes/txt', 'deep/leaf/txt'], 'text');
-  const tree = env.elements['#text-files-tree'];
-  assert.equal(tree['aria-busy'], 'false');
-  const files = env.descendants(tree).filter((node) => {
-    return String(node.className).includes('file-tree-file');
-  });
-  assert.deepEqual(files.map((node) => node.textContent),
-    ['leaf/txt', 'notes/txt']);
-  assert.deepEqual(files.map((node) => node.dataset.path),
-    ['deep/leaf/txt', 'notes/txt']);
-  const directories = env.descendants(tree).filter((node) => {
-    return String(node.className).includes('file-tree-directory');
-  });
-  assert.deepEqual(directories.map((node) => node.textContent), ['deep/']);
-
-  //  an empty listing names the kind's clay leaf, not its label
-  explorer.tree.render([], 'text');
-  assert.equal(tree.textContent, 'No /txt files found.');
-
-  //  a path that escapes the root is refused
-  assert.throws(() => explorer.tree.normalize('../secret'),
-    /Enter a relative Clay path/);
-  assert.throws(() => explorer.tree.normalize('a b'),
-    /unsupported characters/);
-  assert.equal(explorer.tree.normalize('/notes/txt'), 'notes/txt');
   //  ---- persistence -------------------------------------------------
   //
   //  One record, described slot by slot by `config.slots`.  Each slot
@@ -282,12 +233,12 @@ module.exports = async (env) => {
   assert.equal(session.key, 'urui-fixture.session.v1');
   assert.equal(session.version, 1);
 
-  app.source = 'saved body';
+  app.view.scale = 3;
   runtime.theme.apply('dark', false);
   session.save();
   const written = JSON.parse(env.saved.get(session.key));
   assert.equal(written.version, 1);
-  assert.equal(written.source, 'saved body');
+  assert.deepEqual(written.view, {scale: 3});
   //  a dotted slot key nests, it does not become a flat key
   assert.deepEqual(written.preferences, {
     autoEcho: true, theme: 'dark', layout: 'columns', keybindings: 'ace'
@@ -298,10 +249,11 @@ module.exports = async (env) => {
     return key.startsWith('next');
   }).sort(), ['nextDocs', 'nextNoteTab', 'nextRef', 'nextTextTab']);
   assert.equal(Array.isArray(written.textTabs), true);
-  assert.equal(written.activeTextTabId, tabs.activeId('text'));
+  assert.equal(written.activeTextTabId, docs.active('text').id);
+  assert.equal(written.textTabs[0].label, undefined, 'labels are derived');
 
   //  a record is only loaded when its version matches
-  env.saved.set(session.key, JSON.stringify({version: 2, source: 'wrong'}));
+  env.saved.set(session.key, JSON.stringify({version: 2, view: {scale: 9}}));
   assert.equal(session.load(), undefined);
   env.saved.set(session.key, 'not json');
   assert.equal(session.load(), undefined);
@@ -309,17 +261,17 @@ module.exports = async (env) => {
   //  hostile values are dropped slot by slot, never the whole record
   env.saved.set(session.key, JSON.stringify({
     version: 1,
-    source: 'restored body',
     paneWidth: 900,
     explorerWidth: 4,
     explorerOpen: false,
     explorerView: 'no-such-view',
     explorerOrder: ['note-files', 'ghost', 'note-files'],
     textTabs: [
-      {id: 'text-4', source: 'four', label: 'Four'},
-      {id: 'text-4', source: 'duplicate id'},
-      {id: 'bad-id', source: 'wrong prefix'},
-      {id: 'text-9', source: 42}
+      {id: 'text-4', text: 'four', draft: 'Four'},
+      {id: 'text-4', text: 'duplicate id'},
+      {id: 'bad-id', text: 'wrong prefix'},
+      {id: 'text-9', text: 42},
+      {id: 'text-5', text: 'outside', path: ['notes', 'md']}
     ],
     activeTextTabId: 'text-404',
     nextTextTab: 1,
@@ -327,7 +279,6 @@ module.exports = async (env) => {
   }));
   const restored = session.load();
 
-  assert.equal(restored.source, 'restored body');
   assert.deepEqual(restored.view, {scale: 3});
   //  clamped to the configured pane limits, floored to minExplorer
   assert.equal(restored.paneWidth, 70);
@@ -336,32 +287,35 @@ module.exports = async (env) => {
   //  an unknown view falls back; the order keeps only real views, once
   assert.equal(restored.explorerView, 'text-files');
   assert.deepEqual(restored.explorerOrder, ['note-files', 'text-files']);
-  //  one duplicate, one bad prefix and one non-string source dropped
-  assert.deepEqual(restored.textTabs.map((tab) => tab.id), ['text-4']);
+  //  one duplicate, one bad prefix and one non-string text dropped; a
+  //  path no root of the store admits is kept as a draft
+  assert.deepEqual(restored.textTabs.map((tab) => tab.id),
+    ['text-4', 'text-5']);
+  assert.equal(restored.textTabs[1].path, null);
   //  an active id that survived nothing falls back to the first tab
   assert.equal(restored.activeTextTabId, 'text-4');
   //  a saved id carries its own counter, however stale nextTextTab is
-  assert.equal(restored.nextTextTab, 5);
+  assert.equal(restored.nextTextTab, 6);
 
   //  and the shell's half is applied, not merely returned
-  assert.equal(tabs.list('text').length, 1);
-  assert.equal(tabs.activeId('text'), 'text-4');
+  assert.equal(docs.list('text').length, 2);
+  assert.equal(docs.list('text')[0].label, 'Four');
   assert.equal(runtime.layout.explorerOpen(), false);
   assert.deepEqual(explorer.order(), ['note-files', 'text-files']);
   runtime.layout.setExplorerOpen(true, false);
 
   //  ---- shared source in the url ------------------------------------
   //
-  //  The fixture declares a share parameter, so a link carries one source
-  //  and only what `encodeSource` itself would have produced.
-  assert.deepEqual(app.api.config.shareParam,
-    {name: 'text', max: 12_288, paramMax: 16_384});
+  //  The text store declares a share parameter, so a link carries one
+  //  source and only what `encodeSource` itself would have produced.
+  const share = app.api.config.files.stores[0].share;
+  assert.deepEqual(share, {name: 'text', max: 12_288, paramMax: 16_384});
   assert.equal(session.encodeSource('abc'), 'YWJj');
-  assert.equal(session.decodeSource('YWJj'), 'abc');
-  //  no parameter in the url is not a failure: it is no shared source
-  assert.equal(session.sourceFromUrl(), undefined);
-  assert.throws(() => session.decodeSource('YWJj='), /is invalid/);
-  assert.throws(() => session.decodeSource(''), /missing or too large/);
+  assert.equal(session.decodeSource('YWJj', share), 'abc');
+  assert.throws(() => session.decodeSource('YWJj'), /does not share/);
+  assert.throws(() => session.decodeSource('YWJj=', share), /is invalid/);
+  assert.throws(() => session.decodeSource('', share),
+    /missing or too large/);
 
   //  the byte limit counts utf-8, not code units
   assert.equal(session.byteLength('a🙂'), 5);

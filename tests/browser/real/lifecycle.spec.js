@@ -46,10 +46,12 @@ test('startup sources round-trip exactly and start clean history', async ({
   })).toBe(starter);
 
   const restored = 'digraph restored {\n  α -> β\n}\n';
-  await page.evaluate((source) => {
+  await page.evaluate((text) => {
     localStorage.setItem('urui-fixture.session.v1', JSON.stringify({
       version: 1,
-      source,
+      textTabs: [{id: 'text-1', path: null, draft: 'Untitled', text}],
+      activeTextTabId: 'text-1',
+      nextTextTab: 2,
       paneWidth: 44,
       preferences: {theme: 'system'}
     }));
@@ -69,6 +71,8 @@ test('startup sources round-trip exactly and start clean history', async ({
   await expect.poll(() => page.evaluate(() => {
     return window.__URUI_EDITOR_TEST__.getSource();
   })).toBe(shared);
+  await expect(page.getByRole('tab', {name: 'Shared'}))
+    .toHaveAttribute('aria-selected', 'true');
   await page.locator('#editor').click();
   await page.keyboard.press('Control+Z');
   expect(await page.evaluate(() => {
@@ -76,7 +80,8 @@ test('startup sources round-trip exactly and start clean history', async ({
   })).toBe(shared);
 
   await expect.poll(() => page.evaluate(() => {
-    return JSON.parse(localStorage.getItem('urui-fixture.session.v1'))?.source;
+    const record = JSON.parse(localStorage.getItem('urui-fixture.session.v1'));
+    return record?.textTabs?.find((tab) => tab.draft === 'Shared')?.text;
   })).toBe(shared);
   expect(await page.evaluate(() => {
     return JSON.parse(localStorage.getItem('urui-fixture.session.v1')).version;
@@ -97,15 +102,7 @@ test('Text explorer opens reset history and Note opens preserve Text', async ({
       renderCount += 1;
       return renderedSvg(`Render ${renderCount}`);
     },
-    browse: ({kind, path}) => {
-      const leaf = path.endsWith('/txt') || path.endsWith('/md');
-      const children = path === ''
-        ? (kind === 'text' ? ['left', 'menu'] : ['preview'])
-        : leaf
-          ? []
-          : [kind === 'text' ? 'txt' : 'md'];
-      return {file: leaf, children};
-    },
+    browse: () => [['left', 'txt'], ['menu', 'txt'], ['preview', 'md']],
     textLoad: (path) => dotSources[path],
     noteLoad: loadedSvg
   });
@@ -154,6 +151,17 @@ test('Text explorer opens reset history and Note opens preserve Text', async ({
   expect(renderCount).toBeGreaterThan(rendersBeforeSvg);
 });
 
+//  A first save asks for a path in urui's file dialog; `exists` asks
+//  before overwriting, and the retry sends the same text.
+async function saveAs(page, store, path) {
+  await page.locator(`#${store}-save`).click();
+  await expect(page.locator('#urui-file-dialog')).toBeVisible();
+  await page.locator('#urui-file-dialog-path').fill(path);
+  await page.locator('#urui-file-dialog-confirm').click();
+  await expect(page.locator('#urui-confirm')).toBeVisible();
+  await page.locator('#urui-confirm-ok').click();
+}
+
 test('Text and Note save retries preserve exact action-time bodies', async ({
   page
 }) => {
@@ -161,24 +169,13 @@ test('Text and Note save retries preserve exact action-time bodies', async ({
   const saves = {text: [], note: []};
   await installCommonRoutes(page, {
     render: previewSource,
-    save: ({kind, body, request}) => {
-      saves[kind].push({body, headers: request.headers()});
-      return {
-        status: saves[kind].length === 1 ? 409 : 200,
-        body: saves[kind].length === 1 ? 'exists' : 'saved'
-      };
-    }
-  });
-  page.on('dialog', async (dialog) => {
-    if (dialog.type() === 'prompt') {
-      await dialog.accept(dialog.message().startsWith('Text')
-        ? 'exact/source'
-        : 'exact/preview');
-    } else {
-      await dialog.accept();
+    save: ({kind, path, body, overwrite}) => {
+      saves[kind].push({path, body, overwrite});
+      return {status: saves[kind].length === 1 ? 409 : 200};
     }
   });
   await page.goto('/apps/urui-fixture/');
+  await expect(page.locator('#fixture-result')).toContainText('Exact preview');
   const dotSource = 'digraph exact {\n  "🙂" -> β\n}\n';
   await page.evaluate((source) => {
     window.__URUI_EDITOR_TEST__.setSource(source, {
@@ -187,18 +184,17 @@ test('Text and Note save retries preserve exact action-time bodies', async ({
     });
   }, dotSource);
 
-  await page.locator('#save-text').click();
+  await saveAs(page, 'text', 'exact/source');
   await expect.poll(() => saves.text.length).toBe(2);
-  await page.locator('#save-note').click();
+  await saveAs(page, 'note', 'exact/preview');
   await expect.poll(() => saves.note.length).toBe(2);
 
   expect(saves.text.map((request) => request.body))
     .toEqual([dotSource, dotSource]);
   expect(saves.note.map((request) => request.body))
     .toEqual([previewSource, previewSource]);
-  expect(saves.text[0].headers['x-urui-fixture-path']).toBe('exact/source');
-  expect(saves.note[0].headers['x-urui-fixture-path']).toBe('exact/preview');
-  expect(saves.text[1].headers['x-urui-fixture-overwrite']).toBe('true');
-  expect(saves.note[1].headers['x-urui-fixture-overwrite']).toBe('true');
+  expect(saves.text[0].path).toBe('exact/source/txt');
+  expect(saves.note[0].path).toBe('exact/preview/md');
+  expect(saves.text.map((request) => request.overwrite)).toEqual([false, true]);
+  expect(saves.note.map((request) => request.overwrite)).toEqual([false, true]);
 });
-

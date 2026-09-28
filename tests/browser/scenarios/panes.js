@@ -69,8 +69,7 @@ module.exports = async (env) => {
   //  The doubles skip the fixture's own boot work, so the note store is
   //  seeded here; its strip is depth 0 and the two levels under it are
   //  generated into the pane's panel.
-  const note = runtime.tabs.create('note', 'body').id;
-  runtime.tabs.select('note', note, {capture: false});
+  const note = runtime.documents.create('note', {text: 'body'}).id;
   const views = env.document.querySelector('#result-pane-view-tabs');
   const sets = env.document.querySelector('#result-pane-set-tabs');
   assert.equal(views.dataset.depth, '1');

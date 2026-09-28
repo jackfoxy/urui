@@ -58,7 +58,9 @@ test('Ace accepts real keyboard input and updates the application once', async (
   })).toBe(smokeSource);
   await expect.poll(async () => page.evaluate(() => {
     const saved = JSON.parse(localStorage.getItem('urui-fixture.session.v1'));
-    return saved?.source;
+    return saved?.textTabs?.find((tab) => {
+      return tab.id === saved.activeTextTabId;
+    })?.text;
   })).toBe(smokeSource);
   await expect.poll(() => page.evaluate(() => {
     return window.__URUI_SESSION_WRITE_COUNT__;

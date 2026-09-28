@@ -29,13 +29,7 @@ function renderedSvg(source, title = 'Undo test') {
 
 async function installRoutes(page, observations) {
   await installBackend(page, {
-    browse: ({kind, path}) => {
-      const isNote = kind === 'note';
-      const children = !isNote ? []
-        : path === '' ? ['history']
-          : path === 'history' ? ['md'] : [];
-      return {file: isNote && path === 'history/md', children};
-    },
+    browse: () => [['history', 'md']],
     noteLoad: renderedSvg('digraph loaded { Alpha }', 'Loaded history SVG'),
     render: (source) => {
       observations.renderBodies.push(source);
@@ -257,8 +251,12 @@ test.beforeEach(async ({context}) => {
     Storage.prototype.setItem = function countedSetItem(key, value) {
       if (key === 'urui-fixture.session.v1') {
         window.__URUI_SESSION_WRITE_COUNT__ += 1;
-        const previous = JSON.parse(this.getItem(key) || 'null')?.source;
-        const next = JSON.parse(value)?.source;
+        //  the text a record holds is its active text tab's
+        const active = (record) => record?.textTabs?.find((tab) => {
+          return tab.id === record.activeTextTabId;
+        })?.text;
+        const previous = active(JSON.parse(this.getItem(key) || 'null'));
+        const next = active(JSON.parse(value));
         if (previous !== next) window.__URUI_PERSISTED_SOURCES__.push(next);
       }
       return setItem.call(this, key, value);

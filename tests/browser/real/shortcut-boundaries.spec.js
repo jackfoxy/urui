@@ -13,9 +13,7 @@ const toc = [
 
 async function installRoutes(page, state, options = {}) {
   await installBackend(page, {
-    browse: ({kind, path}) => path
-      ? {file: true, children: []}
-      : {file: false, children: [kind === 'text' ? 'txt' : 'md']},
+    browse: () => [['file', 'txt'], ['file', 'md']],
     render: (source) => {
       state.renders.push(source);
       return `echoed: ${source}`;
@@ -64,7 +62,6 @@ test('Ace retains displaced and destructive editor commands', async ({
   const sortable = 'digraph sort {\n  z\n  a\n}';
   await setSourceAndEcho(page, state, sortable);
   await page.evaluate(() => {
-    window.prompt = () => 'must-not-save.text';
     const editor = window.ace.edit(document.querySelector('#editor'));
     editor.selection.setSelectionRange({
       start: {row: 1, column: 0},
@@ -186,19 +183,31 @@ test('focus boundaries cover explorer, Help, docs, and the file tree', async ({
   await expect(action).toBeFocused();
 });
 
-test('Clay dialog Escape restores the invoking control', async ({page}) => {
+test('file dialog Escape restores the invoking control', async ({page}) => {
   const state = {renders: [], saves: {text: [], note: []}};
   await installRoutes(page, state, {
-    textLoad: () => ({status: 500, body: 'forced load failure'})
+    textLoad: () => ({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        error: {
+          code: 'internal', message: 'forced load failure',
+          retryable: false, details: []
+        }
+      })
+    })
   });
   await page.goto('/apps/urui-fixture/');
-  await page.evaluate(() => {
-    window.prompt = () => 'broken.text';
-  });
-  await page.locator('#load-text').click();
-  await expect(page.locator('#clay-error-modal')).toBeVisible();
-  await expect(page.locator('#close-clay-error')).toBeFocused();
+  await page.locator('#text-open').click();
+  await expect(page.locator('#urui-file-dialog')).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.locator('#clay-error-modal')).toBeHidden();
-  await expect(page.locator('#load-text')).toBeFocused();
+  await expect(page.locator('#urui-file-dialog')).toBeHidden();
+  await expect(page.locator('#text-open')).toBeFocused();
+
+  //  a failed load is a sticky toast, not a modal
+  await page.locator('[data-path="file/txt"]').click();
+  await expect(page.locator('#urui-toast')).toBeVisible();
+  await expect(page.locator('#urui-toast-message'))
+    .toContainText('forced load failure');
 });

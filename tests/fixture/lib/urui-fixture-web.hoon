@@ -6,7 +6,7 @@
 ::  present, and so a contract change that only a real consumer would
 ::  notice fails here first.
 ::
-::  Two document kinds, three panes, five chords, and one endpoint set —
+::  Two document stores, three panes, five chords, and one file wire —
 ::  the shapes graph-viz uses, with none of its vocabulary.
 ::
 /-  urui
@@ -21,34 +21,6 @@
           base='/apps/urui-fixture'
           storage-key='urui-fixture.session.v1'
           storage-version=1
-      ==
-      ::  two kinds: one editable source, one read-mostly note
-      :~  :*  name=%text
-              label='Text'
-              untitled='Untitled'
-              ext=%text
-              leaf=%txt
-              mime='text/plain; charset=utf-8'
-              tabs=&
-              refs=&
-          ==
-          :*  name=%note
-              label='Note'
-              untitled='Preview'
-              ext=%note
-              leaf=%md
-              mime='text/markdown; charset=utf-8'
-              tabs=&
-              refs=&
-          ==
-      ==
-      :*  transport=%header
-          path-header=`'x-urui-fixture-path'
-          flag-header=`'x-urui-fixture-overwrite'
-          browse='/apps/urui-fixture/file/{kind}/browse'
-          load='/apps/urui-fixture/file/{kind}/load'
-          save='/apps/urui-fixture/file/{kind}/save'
-          delete='/apps/urui-fixture/file/{kind}/delete'
       ==
       ::  the same numbers graph-viz runs with, so a limit that only
       ::  matters at graph-viz's scale still matters here
@@ -69,7 +41,6 @@
           [%failed 'Failed']
       ==
       docs-root=`'/docs/d/urui-fixture/'
-      share-param=`[name='text' max=12.288 param-max=16.384]
       :*  base='/apps/urui-fixture/ace'
           global='uruiFixtureAceAssets'
           version='1.44.0'
@@ -88,9 +59,39 @@
       ::  pane collapses, so the control is proved for every consumer
       layout=%columns
       collapse=&
-      ::  the document tabs above are $doc-kind's; the store module has
-      ::  its own fixture, urui-fixture-docs
-      files=~
+      files=`fixture-files
+  ==
+::
+++  fixture-files
+  ::  Two stores: an editable source whose `txt` files show as `.text`
+  ::  and share by link, and a note echoed from it, stored as `md`.
+  ::
+  ::  Named apart from the `files` face: a %* value is read with the bunt
+  ::  already in the subject, so a same-named arm would be shadowed.
+  ^-  files:urui
+  :*  url='/apps/urui-fixture/files'
+      :~  :*  name=%text
+              noun='Text'
+              untitled='Untitled'
+              starter='fixture source'
+              roots=~[[~ ~[%txt] `%text &]]
+              preview=~
+              actions=~[%open %save %save-as %ref %browse]
+              refs=&
+              share=`['text' 12.288 16.384]
+          ==
+          :*  name=%note
+              noun='Note'
+              untitled='Preview'
+              starter=''
+              roots=~[[~ ~[%md] `%note &]]
+              preview=`%source
+              actions=~[%open %save %save-as %copy %ref %browse]
+              refs=&
+              share=~
+          ==
+      ==
+      ~[[%text-files %text ~] [%note-files %note ~]]
   ==
 ::
 ++  slots
@@ -99,8 +100,7 @@
   ::  Ordered as it is written, so a reader can compare this list with a
   ::  stored record side by side.
   ^-  (list slot:urui)
-  :~  ['source' %app %scalar ~]
-      ['paneWidth' %urui %scalar ~]
+  :~  ['paneWidth' %urui %scalar ~]
       ['explorerWidth' %urui %scalar ~]
       ['explorerOpen' %urui %scalar ~]
       ['explorerView' %urui %scalar ~]
@@ -124,15 +124,16 @@
       ['preferences.keybindings' %urui %scalar ~]
       ['paneHeight' %urui %scalar ~]
       ['resultOpen' %urui %scalar ~]
+      ['fileTrees' %urui %record ~]
   ==
 ::
 ++  shortcuts
-  ::  Five chords with the shapes graph-viz owns: run, save, save-as,
-  ::  and two view commands.
+  ::  Five chords with the shapes graph-viz owns: run, a save for each
+  ::  store, and two view commands.
   ^-  (list shortcut:urui)
   :~  ['Ctrl-Enter' 'echo' %always]
-      ['Ctrl-S' 'save' %always]
-      ['Ctrl-Shift-S' 'save-as' %always]
+      ['Ctrl-S' 'save:text' %always]
+      ['Ctrl-Shift-S' 'save:note' %always]
       ['Ctrl-0' 'reset-view' %preview]
       ['Ctrl-1' 'fit-view' %preview]
   ==
@@ -171,7 +172,6 @@
   :~  ;nav.toolbar(aria-label "Fixture controls")
         ;button#help(type "button", aria-expanded "false"): Help
         ;button#echo.primary(type "button"): Echo
-        ;div#editor-load-error.editor-load-error(hidden "", role "alert");
         ;label.toggle
           ;input#auto-echo(type "checkbox", checked "");
           ;span: Auto
@@ -230,19 +230,18 @@
       mode=%read-write
       kind=`%text
       ::  The tabs come first and the heading after them: the other
-      ::  ordering from the result pane, out of the same two items.
+      ::  ordering from the result pane, out of the same two items.  urui
+      ::  appends the store's file actions to the heading.
       :~  (pinned %tabs [%tabs ~[editor-level]])
           (pinned %head [%heading `'Source' `'source-status' ~])
-          ::  open by default: the file controls are what the browser
-          ::  specs click, and the reveal round-trip closes them
           %:  hideable
             %controls
             'editorControls'
             open=&
-            label='File controls'
+            label='Editor hints'
             [%controls editor-controls]
           ==
-          (pinned %body [%panel 'editor-body' ~ ~[editor-host]])
+          (pinned %body [%panel 'editor-body' `primary-editor ~])
       ==
   ==
 ::
@@ -259,28 +258,23 @@
   ==
 ::
 ++  editor-controls
-  ::  The kind's four file controls, named the way `++wire` in urui-js
-  ::  expects: `#browse-text`, `#load-text`, `#save-text`.
-  ::
-  ::  A `marl` literal is cast here rather than inline: an uncast list of
-  ::  Sail elements carries each element's own type into the pane's mold,
-  ::  and the nest check that follows is slow enough to notice.
+  ::  A band the user can hide.  Cast rather than inline: an uncast list
+  ::  of Sail elements carries each element's own type into the pane's
+  ::  mold, and the nest check that follows is slow enough to notice.
   ^-  marl
-  :~  ;button#add-text-ref(type "button", disabled ""):"Add Ref"
-      ;button#browse-text(type "button"):"Browse"
-      ;button#load-text(type "button"):"Load"
-      ;button#save-text(type "button"):"Save"
+  :~  ;p.fixture-hint: Ctrl-Enter echoes the source into a note.
   ==
 ::
-++  editor-host
-  ::  Labelled by the pane heading and described by both problem lines:
-  ::  the shape the Ace adapter carries onto its own text input.
-  ^-  manx
-  ;div#editor.editor-host
-    =role               "region"
-    =aria-labelledby    "text-source-heading"
-    =aria-describedby   "error editor-load-error"
-    ;span(hidden "");
+++  primary-editor
+  ::  The text store's Ace host; urui labels it and mounts it.  `mode` is
+  ::  empty, so the ace-spec's fixture mode applies.
+  ^-  editor:urui
+  :*  id='editor'
+      label='Text source editor'
+      mode=''
+      wrap=&
+      read-only=|
+      max-bytes=262.144
   ==
 ::
 ++  result-pane
@@ -306,7 +300,7 @@
 ::
 ++  result-level
   ::  No `+`: the note store is filled by echoing a text tab, so its
-  ::  strip is the branch of ++renderTabs that draws no add control.
+  ::  strip draws no add control.
   ^-  tab-level:urui
   :*  name=%document
       label='Note documents'
@@ -348,10 +342,7 @@
 ::
 ++  result-controls
   ^-  marl
-  :~  ;button#add-note-ref(type "button", disabled ""):"Add Ref"
-      ;button#browse-note(type "button"):"Browse"
-      ;button#load-note(type "button"):"Load"
-      ;button#save-note(type "button"):"Save"
+  :~  ;p.fixture-hint: A note is Markdown: its toggle shows a preview.
   ==
 ::
 ++  result-body
@@ -365,7 +356,7 @@
 ++  secondary-editor
   ^-  editor:urui
   :*  id='result-editor'
-      label='Result source'
+      label='Note source editor'
       mode='ace/mode/text'
       wrap=&
       read-only=|
@@ -444,6 +435,12 @@
     font-family: monospace;
   }
 
+  .fixture-hint {
+    color: var(--muted);
+    margin: 0;
+    padding: 0.25rem 0.75rem;
+  }
+
   #editor, #result-editor {
     background: var(--surface);
     border: 0;
@@ -511,7 +508,9 @@
   '''
 ::
 ++  app-js
-  ::  Mount both editors and bind fixture policy to the shared runtime.
+  ::  Bind fixture policy to the shared runtime: urui owns both stores,
+  ::  their editors, files, tree, and references; the fixture echoes a
+  ::  text into a note and splits the active note into sections.
   ^-  @t
   '''
   const fixtureCalls = [];
@@ -523,14 +522,12 @@
     };
   }
 
-  const fixture = {
-    calls: fixtureCalls,
-    source: 'fixture source',
-    view: {scale: 1}
-  };
+  const fixture = {calls: fixtureCalls, view: {scale: 1}};
+  //  urui mounts both editors in `docs.start()`; they are bound after it
   let editor;
   let noteEditor;
   let echoTimer;
+  const autoEcho = () => document.querySelector('#auto-echo')?.checked;
   //  the fixture's own problem line, the way a consumer reports a failed
   //  request beside its result
   const showProblem = (message) => {
@@ -565,14 +562,19 @@
       ? `${sections.length} section(s)`
       : sections.find((item) => item.id === part)?.source ?? '';
   };
-  //  filled from a tab hook, never from `onRendered`: ++setLevelTabs
+  //  filled from a store hook, never from `onRendered`: ++setLevelTabs
   //  renders, and rendering back into it would not terminate
-  const syncSections = () => {
-    sections = noteSections(runtime.tabs.active('note')?.source);
+  const syncSections = (text) => {
+    sections = noteSections(text);
     runtime.panes.set('result-pane', 'set', sections.map((item) => {
       return {id: item.id, label: item.label};
     }));
     paintSection();
+  };
+  const showNote = (text) => {
+    const result = document.querySelector('#fixture-result');
+    if (result) result.textContent = text;
+    syncSections(text);
   };
   const runtime = window.urui.runtime({
     elements: {
@@ -582,32 +584,24 @@
       editorStatus: document.querySelector('#source-status'),
       resultStatus: document.querySelector('#result-status')
     },
-    editors: () => [editor, noteEditor],
     //  a persisted value moved: record it, then write the record, the
     //  way a consumer keeps its session current
     onChange: (...args) => {
       fixtureCalls.push({group: 'runtime', method: 'change', args});
       if (!window.__URUI_DOUBLES_TEST__) runtime.session.queue();
     },
+    //  the browser specs pin Ace's keyboard platform
+    acePlatform: window.__URUI_BROWSER_TEST__?.acePlatform,
     onResize: fixtureHook('runtime', 'resize', undefined),
     onHelpOpen: fixtureHook('runtime', 'helpOpen', undefined),
-    onTabsRendered: fixtureHook('runtime', 'tabsRendered', undefined),
     panes: {onSelect: () => paintSection()},
     session: {
       read: (key) => {
-        if (key === 'source') {
-          return window.__URUI_DOUBLES_TEST__
-            ? fixture.source
-            : editor?.getSource() ?? fixture.source;
-        }
         if (key === 'view') return fixture.view;
-        if (key === 'preferences.autoEcho') {
-          return document.querySelector('#auto-echo')?.checked ?? true;
-        }
+        if (key === 'preferences.autoEcho') return autoEcho() ?? true;
         return undefined;
       },
       validate: (key, value) => {
-        if (key === 'source') return typeof value === 'string' ? value : '';
         if (key === 'view') return value && typeof value === 'object'
           ? {scale: Number(value.scale) || 1}
           : undefined;
@@ -615,175 +609,84 @@
         return undefined;
       }
     },
-    tabs: {
+    documents: {
       text: {
-        validate: (candidate, base) => ({
-          selection: candidate.selection || {start: 0, end: 0}
-        }),
-        defaults: (options) => ({
-          selection: options.selection || {start: 0, end: 0}
-        }),
-        empty: () => runtime.tabs.create('text', ''),
-        onCapture: (tab) => {
-          if (!window.__URUI_DOUBLES_TEST__) {
-            tab.source = editor?.getSource() ?? tab.source;
-            tab.selection = editor?.getSelection() ?? tab.selection;
-          }
-          fixtureCalls.push({group: 'tabs', method: 'capture', args: [tab]});
-        },
-        onActivate: (tab, choices) => {
-          if (!window.__URUI_DOUBLES_TEST__) {
-            editor?.setSource(tab.source, {
-              history: 'reset', notify: false, selection: tab.selection
-            });
-          }
+        activate: (tab, choices) => {
           fixtureCalls.push({
             group: 'tabs', method: 'activate', args: [tab, choices]
           });
         },
-        afterActivate: (...args) => {
-          fixtureCalls.push({group: 'tabs', method: 'afterActivate', args});
-          if (document.querySelector('#auto-echo')?.checked) dispatchEcho();
-        },
-        onClose: fixtureHook('tabs', 'closed', undefined)
-      },
-      note: {
-        defaults: (options, source) => ({editBaseSource: source}),
-        empty: () => runtime.tabs.create('note', ''),
-        onCapture: (tab) => {
-          if (!window.__URUI_DOUBLES_TEST__) {
-            tab.source = noteEditor?.getSource() ?? tab.source;
-          }
-        },
-        onActivate: (tab) => {
-          if (!window.__URUI_DOUBLES_TEST__) {
-            noteEditor?.setSource(
-              tab.source, {history: 'reset', notify: false}
-            );
-          }
-          const result = document.querySelector('#fixture-result');
-          if (result) result.textContent = tab.source;
-          syncSections();
+        afterActivate: (tab, choices) => {
+          fixtureCalls.push({
+            group: 'tabs', method: 'afterActivate', args: [tab, choices]
+          });
+          if (!choices.restore && autoEcho()) dispatchEcho();
         }
+      },
+      //  a note remembers the text it was echoed from
+      note: {
+        fields: {
+          defaults: () => ({parentTextId: undefined}),
+          validate: (candidate, tab, ids) => ({
+            parentTextId: ids.get('text')?.has(candidate.parentTextId)
+              ? candidate.parentTextId : undefined
+          })
+        },
+        activate: (tab) => showNote(tab.text)
       }
     }
   });
-  try {
-    const assets = window.uruiFixtureAceAssets;
-    editor = window.urui.editor.adapter(document.querySelector('#editor'), {
-      assets,
-      label: 'Text source editor',
-      labelledBy: 'text-source-heading',
-      describedBy: 'error editor-load-error',
-      platform: window.__URUI_BROWSER_TEST__?.acePlatform
-    });
-    noteEditor = window.urui.editor.adapter(
-      document.querySelector('#result-editor'),
-      {
-        assets,
-        label: 'Note source editor',
-        describedBy: 'editor-load-error',
-        platform: window.__URUI_BROWSER_TEST__?.acePlatform
-      }
-    );
-  } catch (cause) {
-    const primaryHost = document.querySelector('#editor');
-    const noteHost = document.querySelector('#result-editor');
-    if (primaryHost) primaryHost.hidden = true;
-    if (noteHost) noteHost.hidden = true;
-    const failure = document.querySelector('#editor-load-error');
-    if (failure) {
-      failure.hidden = false;
-      failure.title = String(cause);
-      failure.textContent = 'Source editors unavailable. Reload after '
-        + 'checking the Ace assets.';
-    }
-  }
-  fixture.editors = [editor, noteEditor];
-  fixture.editor = editor;
-  fixture.noteEditor = noteEditor;
-  window.__URUI_EDITOR_TEST__ = editor;
-  window.__URUI_NOTE_EDITOR_TEST__ = noteEditor;
+  const docs = runtime.documents;
   fixture.runtime = runtime;
   runtime.wire();
   if (!window.__URUI_DOUBLES_TEST__) {
     const saved = runtime.session.load();
-    const autoEcho = document.querySelector('#auto-echo');
-    if (saved && autoEcho) autoEcho.checked = saved['preferences.autoEcho'];
-    let shared;
-    try {
-      shared = runtime.session.sourceFromUrl();
-    } catch (cause) {
-      //  a bad shared link is a client-side problem, not a Clay failure
-      showProblem(String(cause));
-    }
-    if (shared !== undefined) {
-      const tab = runtime.tabs.create('text', shared, {label: 'Shared'});
-      runtime.tabs.setActiveId('text', tab.id);
-    }
-    if (!runtime.tabs.list('text').length) {
-      runtime.tabs.create('text', saved?.source ?? fixture.source);
-    }
-    if (!runtime.tabs.list('note').length) runtime.tabs.create('note', '');
-    runtime.tabs.select(
-      'text', runtime.tabs.activeId('text') || runtime.tabs.list('text')[0].id,
-      {capture: false}
-    );
-    runtime.tabs.select(
-      'note', runtime.tabs.activeId('note') || runtime.tabs.list('note')[0].id,
-      {capture: false}
-    );
-    //  the startup record is worth keeping: a shared link's source only
-    //  reaches storage if the first state is written back
-    runtime.session.queue();
-    editor?.onChange(() => {
-      runtime.tabs.capture('text');
-      runtime.tabs.render('text');
-      runtime.session.queue();
-      if (document.querySelector('#auto-echo')?.checked) {
-        clearTimeout(echoTimer);
-        echoTimer = setTimeout(dispatchEcho,
-          window.URUI_CONFIG.limits.renderDebounce);
-      }
-    });
-    noteEditor?.onChange(() => {
-      runtime.tabs.capture('note');
-      runtime.tabs.render('note');
-      const result = document.querySelector('#fixture-result');
-      if (result) result.textContent = noteEditor.getSource();
-      syncSections();
-      runtime.session.queue();
-    });
-  }
-  if (!window.__URUI_DOUBLES_TEST__) {
+    const toggle = document.querySelector('#auto-echo');
+    if (saved && toggle) toggle.checked = saved['preferences.autoEcho'];
     //  the explorer's restored strip: docs and reference tabs come back
-    //  from the session, and each reference re-reads its parent
+    //  from the session
     runtime.explorer.docs.render();
     runtime.explorer.refs.render();
-    runtime.explorer.refs.syncAll();
     runtime.explorer.setView(runtime.explorer.view());
-    runtime.explorer.tree.refresh('text');
-    runtime.explorer.tree.refresh('note');
+    docs.start();
     runtime.explorer.docs.refreshVariant();
   }
+  //  under the doubles a scenario starts the stores itself
+  const bindEditors = () => {
+    editor = docs.editor('text');
+    noteEditor = docs.editor('note');
+    fixture.editors = [editor, noteEditor];
+    fixture.editor = editor;
+    fixture.noteEditor = noteEditor;
+    window.__URUI_EDITOR_TEST__ = editor;
+    window.__URUI_NOTE_EDITOR_TEST__ = noteEditor;
+    editor?.onChange(() => {
+      if (!autoEcho()) return;
+      clearTimeout(echoTimer);
+      echoTimer = setTimeout(dispatchEcho,
+        window.URUI_CONFIG.limits.renderDebounce);
+    });
+    noteEditor?.onChange(() => showNote(noteEditor.getSource()));
+  };
+  fixture.bindEditors = bindEditors;
+  if (!window.__URUI_DOUBLES_TEST__) bindEditors();
   //  the note a source echoes into is named after that source and bound
   //  to it, so echoing twice replaces one note instead of stacking them
   const noteLabelFor = (tab) => {
-    if (!tab || tab.label === 'Untitled') return 'Preview';
+    if (!tab?.path) return 'Preview';
     return tab.label.endsWith('.text')
       ? `${tab.label.slice(0, -5)}.note`
       : `${tab.label}.note`;
   };
   const echoedNote = (parentId) => {
-    const notes = runtime.tabs.list('note');
+    const notes = docs.list('note');
     return notes.find((tab) => tab.parentTextId === parentId)
-      || notes.find((tab) => !tab.source && !tab.path && !tab.parentTextId)
-      || runtime.tabs.create('note', '');
+      || notes.find((tab) => !tab.text && !tab.path && !tab.parentTextId)
+      || docs.create('note', {text: '', activate: false});
   };
   runtime.shortcuts.register('echo', async () => {
-    runtime.tabs.capture('text');
-    const parent = runtime.tabs.active('text');
-    const source = editor?.getSource() ?? '';
+    const parent = docs.active('text');
+    const source = editor?.getSource() ?? parent?.text ?? '';
     runtime.status.set('editor', 'working');
     try {
       const response = await fetch('/apps/urui-fixture/echo', {
@@ -791,15 +694,15 @@
       });
       if (!response.ok) throw new Error(await response.text());
       const body = await response.text();
-      runtime.tabs.capture('note');
       const note = echoedNote(parent?.id);
-      note.label = noteLabelFor(parent);
-      note.source = body;
-      note.editBaseSource = body;
-      note.parentTextId = parent?.id;
-      runtime.explorer.refs.syncFromParent('note', note.id);
-      runtime.tabs.setActiveId('note', undefined);
-      runtime.tabs.select('note', note.id, {capture: false});
+      const wasActive = docs.active('note')?.id === note.id;
+      docs.update('note', note.id, {
+        text: body,
+        label: noteLabelFor(parent),
+        fields: {parentTextId: parent?.id}
+      });
+      if (wasActive) showNote(body);
+      else docs.select('note', note.id);
       runtime.status.set('editor', 'idle');
       showProblem('');
     } catch (cause) {
@@ -808,21 +711,11 @@
       throw cause;
     }
   });
-  runtime.shortcuts.register('save', () => runtime.files.save('text'));
-  runtime.shortcuts.register('save-as', () => runtime.files.save('note'));
   runtime.shortcuts.register('reset-view', () => { fixture.view.scale = 1; });
   runtime.shortcuts.register('fit-view', () => { fixture.view.scale = 2; });
   document.querySelector('#echo')?.addEventListener('click', dispatchEcho);
-  for (const name of ['text', 'note']) {
-    document.querySelector(`#add-${name}-ref`)?.addEventListener('click', () => {
-      runtime.explorer.refs.add(name, runtime.tabs.activeId(name));
-    });
-  }
   //  a consumer that renders on change renders what it starts with too
-  if (!window.__URUI_DOUBLES_TEST__
-    && document.querySelector('#auto-echo')?.checked) {
-    dispatchEcho();
-  }
+  if (!window.__URUI_DOUBLES_TEST__ && autoEcho()) dispatchEcho();
   document.querySelector('#auto-echo')?.addEventListener('change', (event) => {
     runtime.session.queue();
     if (event.target.checked) dispatchEcho();

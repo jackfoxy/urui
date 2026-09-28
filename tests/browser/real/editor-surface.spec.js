@@ -234,7 +234,8 @@ test('editor exposes label, keyboard focus, and failure semantics', async ({
   page
 }) => {
   await page.goto('/apps/urui-fixture/');
-  await expect(page.getByRole('region', {name: 'Source'})).toBeVisible();
+  await expect(page.getByRole('region', {name: 'Source', exact: true}))
+    .toBeVisible();
   const semantics = await page.evaluate(() => {
     const host = document.querySelector('#editor');
     const aceEditor = window.ace.edit(host);
@@ -255,9 +256,9 @@ test('editor exposes label, keyboard focus, and failure semantics', async ({
   });
   expect(semantics).toEqual({
     labelledBy: 'text-source-heading',
-    describedBy: 'error editor-load-error',
+    describedBy: 'editor-load-error',
     inputLabelledBy: 'text-source-heading',
-    inputDescribedBy: 'error editor-load-error',
+    inputDescribedBy: 'editor-load-error',
     inputInvalid: 'false',
     inputTabIndex: 0,
     focused: true,

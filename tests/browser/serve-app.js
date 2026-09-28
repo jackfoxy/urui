@@ -24,7 +24,6 @@ const root = path.resolve(__dirname, '../..');
 //  that imports it, exactly as ford would order them
 const URUI_BINDINGS = [
   ['urui', 'desk/sur/urui.hoon'],
-  ['uclay', 'desk/lib/urui-clay.hoon'],
   ['ucss', 'desk/lib/urui-css.hoon'],
   ['uace', 'desk/lib/urui-ace.hoon'],
   ['ucfg', 'desk/lib/urui-config.hoon'],

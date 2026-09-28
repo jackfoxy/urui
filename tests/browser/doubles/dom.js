@@ -36,12 +36,10 @@ const selectors = [
   '#text-files-tab', '#note-files-tab',
   '#text-files-panel', '#note-files-panel',
   '#text-files-tree', '#note-files-tree',
-  '#add-text-ref', '#add-note-ref',
   '#dot-files-panel', '#svg-files-panel',
   '#dot-files-tree', '#svg-files-tree',
   '#file-context-menu', '#file-context-open', '#file-context-delete',
-  '#clay-error-modal',
-  '#clay-error-message', '#close-clay-error', '#workspace', '#splitter',
+  '#workspace', '#splitter',
   '#inspector',
   '#selection-kind', '#selection-id', '#clear-selection',
   '#delete-selection', '#attribute-form', '#shape-control', '#fill-control',
@@ -53,6 +51,11 @@ const selectors = [
   '#attr-change-all', '#attr-use-default',
   '#new-node-name', '#new-node-category', '#new-node-shape', '#add-node',
   '#draw-edge',
+  //  urui-fixture-web: two stores, `text` and `note`
+  '#text-open', '#text-save', '#text-save-as', '#text-ref', '#text-browse',
+  '#note-open', '#note-save', '#note-save-as', '#note-copy', '#note-ref',
+  '#note-browse', '#note-display', '#note-preview',
+  '#result-editor-load-error',
   //  urui-fixture-docs: one store, `page`, and the document dialogs
   '#page-editor', '#page-editor-load-error', '#page-preview',
   '#page-open', '#page-save', '#page-save-as', '#page-copy', '#page-ref',
@@ -287,11 +290,11 @@ function createDom() {
   elements['#help-panel'].hidden = true;
   elements['#docs-help-content'].hidden = true;
   elements['#file-context-menu'].hidden = true;
-  elements['#clay-error-modal'].hidden = true;
   elements['#editor-load-error'].hidden = true;
   //  the document Sail's own starting state
   for (const name of [
     '#page-editor-load-error', '#page-preview', '#page-display',
+    '#note-display', '#note-preview', '#result-editor-load-error',
     '#dot-load-error', '#svg-source-load-error', '#svg-preview',
     '#svg-display',
     '#urui-file-dialog', '#urui-confirm', '#urui-toast',
@@ -307,7 +310,7 @@ function createDom() {
   ]) {
     elements[name].localName = tag;
   }
-  for (const toggle of ['#page-display', '#svg-display']) {
+  for (const toggle of ['#page-display', '#svg-display', '#note-display']) {
     for (const display of ['source', 'preview']) {
       const button = new Element('button');
       button.dataset.display = display;

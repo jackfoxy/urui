@@ -76,15 +76,11 @@ module.exports = async (env) => {
   assert.equal(calls.at(-1), 'inside');
   shortcuts.splice(-2);
 
-  // Escape unwinds Help, then Clay errors, then the file menu.
-  runtime.dialogs.showError('problem');
+  // Escape unwinds Help, then the file menu.
   runtime.dialogs.setHelpOpen(true);
   env.elements['#file-context-menu'].hidden = false;
   key('Escape');
   assert.equal(runtime.dialogs.helpIsOpen(), false);
-  assert.equal(runtime.dialogs.errorIsOpen(), true);
-  key('Escape');
-  assert.equal(runtime.dialogs.errorIsOpen(), false);
   assert.equal(env.elements['#file-context-menu'].hidden, false);
   key('Escape');
   assert.equal(env.elements['#file-context-menu'].hidden, true);

@@ -20,13 +20,7 @@ async function installRoutes(page, state) {
       pagesGlob: '**/docs/d/**',
       pages: '<html><title>Graph Viz > Users Guide</title></html>'
     },
-    browse: ({kind, path}) => {
-      const leaf = kind === 'text' ? 'txt' : 'md';
-      let children = [];
-      if (!path) children = kind === 'text' ? ['left', 'menu'] : ['preview'];
-      else if (!path.endsWith(`/${leaf}`)) children = [leaf];
-      return {file: path.endsWith(`/${leaf}`), children};
-    },
+    browse: () => [['left', 'txt'], ['menu', 'txt'], ['preview', 'md']],
     textLoad: (path) => {
       state.textLoads.push(path);
       return dotSources[path];
@@ -35,12 +29,8 @@ async function installRoutes(page, state) {
       state.noteLoads += 1;
       return renderedSvg('Loaded file');
     },
-    save: ({body, request}) => {
-      state.saves.push({
-        url: request.url(),
-        headers: request.headers(),
-        body
-      });
+    save: ({path, body, overwrite, base}) => {
+      state.saves.push({path, body, overwrite, base});
     },
     render: (source, request) => {
       state.renders.push(request.postData());
@@ -49,8 +39,8 @@ async function installRoutes(page, state) {
   });
 }
 
-//  a kind's strip is the one its %documents level declared, and the
-//  fixture puts the text kind in the editor pane and the note kind in
+//  a store's strip is the one its %documents level declared, and the
+//  fixture puts the text store in the editor pane and the note store in
 //  the result pane
 const stripFor = (kind) => {
   return kind === 'text'
@@ -63,6 +53,13 @@ function tabControl(page, kind, label) {
     .filter({has: page.getByRole('tab', {name: label, exact: true})});
 }
 
+//  urui's confirm dialog, answered
+async function answer(page, accept) {
+  await expect(page.locator('#urui-confirm')).toBeVisible();
+  await page.locator(accept ? '#urui-confirm-ok' : '#urui-confirm-cancel')
+    .click();
+}
+
 async function useStoredSession(page) {
   await page.addInitScript(() => {
     window.__URUI_BROWSER_TEST__ = {
@@ -72,7 +69,12 @@ async function useStoredSession(page) {
     if (!localStorage.getItem('urui-fixture.session.v1')) {
       localStorage.setItem('urui-fixture.session.v1', JSON.stringify({
         version: 1,
-        source: 'digraph initial {}',
+        textTabs: [{
+          id: 'text-1', path: null, draft: 'Untitled',
+          text: 'digraph initial {}'
+        }],
+        activeTextTabId: 'text-1',
+        nextTextTab: 2,
         paneWidth: 44,
         preferences: {autoEcho: false, theme: 'system'}
       }));
@@ -96,13 +98,14 @@ test('Text tabs focus, render conditionally, save, and guard close', async ({
   await page.getByRole('button', {name: 'Add empty Text tab'}).click();
   await expect(page.locator('#editor-pane-document-tabs [role="tab"]'))
     .toHaveCount(initialTabCount + 1);
+  //  a new tab starts from the store's starter text
   await expect.poll(() => page.evaluate(() => {
     return window.__URUI_EDITOR_TEST__.getSource();
-  })).toBe('');
+  })).toBe('fixture source');
   const addedTab = page.locator(
     '#editor-pane-document-tabs [role="tab"][aria-selected="true"]'
   );
-  await expect(addedTab).toHaveText('Untitled');
+  await expect(addedTab).toHaveText('Untitled 2');
   await addedTab.locator('..').locator('.document-tab-close').click();
   await expect(page.locator('#editor-pane-document-tabs [role="tab"]'))
     .toHaveCount(initialTabCount);
@@ -112,22 +115,25 @@ test('Text tabs focus, render conditionally, save, and guard close', async ({
   await expect.poll(() => state.renders.length).toBe(1);
   await expect(page.locator('#fixture-result')).toContainText('Render 1');
   await expect(tabControl(page, 'note', 'left.note')
-    .locator('.document-tab-close')).toHaveText('O');
-  page.once('dialog', (dialog) => dialog.accept('rendered/output'));
-  await page.evaluate(() => document.querySelector('#save-note').click());
+    .locator('.document-tab-close')).toHaveText('●');
+  await page.locator('#note-save').click();
+  await page.locator('#urui-file-dialog-path').fill('rendered/output');
+  await page.locator('#urui-file-dialog-confirm').click();
   await expect.poll(() => state.saves.length).toBe(1);
-  await expect(tabControl(page, 'note', 'output')
-    .locator('.document-tab-close')).toHaveText('X');
+  expect(state.saves[0].path).toBe('rendered/output/md');
+  await expect(tabControl(page, 'note', 'output.note')
+    .locator('.document-tab-close')).toHaveText('×');
   await page.locator('[data-path="menu/txt"]').click();
   await expect(page.getByRole('tab', {name: 'menu.text'}))
     .toHaveAttribute('aria-selected', 'true');
   expect(state.renders).toHaveLength(1);
   await expect(page.locator('#fixture-result')).toContainText('Render 1');
 
+  //  reopening a clean tab reloads it from Clay
   await page.locator('[data-path="left/txt"]').click();
-  expect(state.textLoads).toEqual(['left/txt', 'menu/txt']);
   await expect(page.getByRole('tab', {name: 'left.text'}))
     .toHaveAttribute('aria-selected', 'true');
+  expect(state.textLoads).toEqual(['left/txt', 'menu/txt', 'left/txt']);
 
   await page.evaluate(() => {
     const editor = window.__URUI_EDITOR_TEST__;
@@ -135,27 +141,28 @@ test('Text tabs focus, render conditionally, save, and guard close', async ({
       '\n// changed');
   });
   await expect(tabControl(page, 'text', 'left.text')
-    .locator('.document-tab-close')).toHaveText('O');
+    .locator('.document-tab-close')).toHaveText('●');
 
-  await page.evaluate(() => document.querySelector('#save-text').click());
+  await page.locator('#text-save').click();
   await expect.poll(() => state.saves.length).toBe(2);
-  expect(state.saves[1].headers['x-urui-fixture-path']).toBe('left/txt');
-  expect(state.saves[1].headers['x-urui-fixture-overwrite']).toBe('true');
+  expect(state.saves[1].path).toBe('left/txt');
+  expect(state.saves[1].overwrite).toBe(false);
+  expect(state.saves[1].base).toMatch(/^0v/);
   await expect(tabControl(page, 'text', 'left.text')
-    .locator('.document-tab-close')).toHaveText('X');
+    .locator('.document-tab-close')).toHaveText('×');
 
   await page.evaluate(() => {
     const editor = window.__URUI_EDITOR_TEST__;
     editor.replaceRange(editor.getSource().length, editor.getSource().length,
       '\n// dirty');
   });
-  page.once('dialog', (dialog) => dialog.dismiss());
   await tabControl(page, 'text', 'left.text')
     .locator('.document-tab-close').click();
+  await answer(page, false);
   await expect(page.getByRole('tab', {name: 'left.text'})).toBeVisible();
-  page.once('dialog', (dialog) => dialog.accept());
   await tabControl(page, 'text', 'left.text')
     .locator('.document-tab-close').click();
+  await answer(page, true);
   await expect(page.getByRole('tab', {name: 'left.text'})).toHaveCount(0);
 
   for (const label of ['menu.text', 'Untitled']) {
@@ -230,16 +237,18 @@ test('Add Ref creates persistent, synced, read-only Text and Note tabs', async (
   await useStoredSession(page);
   await page.goto('/apps/urui-fixture/');
 
-  const addDotRef = page.locator('#add-text-ref');
+  const addDotRef = page.locator('#text-ref');
   await expect(addDotRef).toBeEnabled();
   await addDotRef.click();
-  await expect(addDotRef).toBeDisabled();
   const dotRef = page.locator('#explorer-view-tabs .ref-tab').filter({
     hasText: 'Untitled'
   });
   await expect(dotRef).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.ref-source'))
     .toHaveText('digraph initial {}');
+  //  a second Add Ref shows the reference it already has
+  await addDotRef.click();
+  await expect(page.locator('#explorer-view-tabs .ref-tab')).toHaveCount(1);
 
   //  The reference document fills the explorer, rather than collapsing
   //  to the height of its own text.  The panels live inside the %tabs
@@ -265,31 +274,32 @@ test('Add Ref creates persistent, synced, read-only Text and Note tabs', async (
   await expect(page.locator('.ref-source'))
     .toContainText('// synced reference');
 
-  page.once('dialog', (dialog) => dialog.accept());
   await tabControl(page, 'text', 'Untitled')
     .locator('.document-tab-close').click();
+  await answer(page, true);
   await expect(dotRef).toBeVisible();
   await page.waitForTimeout(200);
   await page.reload();
   await expect(page.locator('.ref-source'))
     .toContainText('// synced reference');
 
+  //  a note is Markdown: its reference is rendered, not quoted
   await page.locator('#echo').click();
   await expect.poll(() => state.renders.length).toBeGreaterThan(0);
-  const addSvgRef = page.locator('#add-note-ref');
+  const addSvgRef = page.locator('#note-ref');
   await expect(addSvgRef).toBeEnabled();
   await addSvgRef.click();
-  await expect(addSvgRef).toBeDisabled();
-  await expect(page.locator('.ref-source').last())
+  const noteRef = page.locator('.ref-explorer-panel').last();
+  await expect(noteRef)
     .toContainText(`<title>Render ${state.renders.length}</title>`);
 
   const before = state.renders.length;
   await page.locator('#echo').click();
   await expect.poll(() => state.renders.length).toBe(before + 1);
-  await expect(page.locator('.ref-source').last())
+  await expect(noteRef)
     .toContainText(`<title>Render ${before + 1}</title>`);
   await page.locator('.ref-tab-close').last().click();
-  await expect(addSvgRef).toBeEnabled();
+  await expect(page.locator('#explorer-view-tabs .ref-tab')).toHaveCount(1);
 });
 
 test('tabs stay draggable; only an available Ref drops on the explorer',
@@ -305,23 +315,26 @@ test('tabs stay draggable; only an available Ref drops on the explorer',
   await dotTab.dragTo(page.locator('#explorer-view-tabs'));
   await expect(page.locator('#explorer-view-tabs .ref-tab'))
     .toHaveText('Untitled');
-  await expect(page.locator('#add-text-ref')).toBeDisabled();
 
   await expect.poll(() => dotTab.evaluate((node) => node.draggable))
     .toBe(true);
   await dotTab.dragTo(page.locator('#explorer-view-tabs'));
   await expect(page.locator('#explorer-view-tabs .ref-tab')).toHaveCount(1);
 
+  //  an empty tab has nothing to refer to
   await page.getByRole('button', {name: 'Add empty Text tab'}).click();
-  const emptyTab = tabControl(page, 'text', 'Untitled').last();
-  await expect(page.locator('#add-text-ref')).toBeDisabled();
+  await page.evaluate(() => {
+    window.__URUI_EDITOR_TEST__.setSource('', {history: 'reset'});
+  });
+  const emptyTab = tabControl(page, 'text', 'Untitled 2');
+  await expect(page.locator('#text-ref')).toBeDisabled();
   await expect.poll(() => emptyTab.evaluate((node) => node.draggable))
     .toBe(true);
   await emptyTab.dragTo(page.locator('#explorer'));
   await expect(page.locator('#explorer-view-tabs .ref-tab')).toHaveCount(1);
 
   await dotTab.first().locator('.document-tab').click();
-  await expect(page.locator('#add-note-ref')).toBeDisabled();
+  await expect(page.locator('#note-ref')).toBeDisabled();
   await page.locator('#echo').click();
   await expect.poll(() => state.renders.length).toBe(1);
   const svgTab = tabControl(page, 'note', 'Preview');
@@ -330,7 +343,6 @@ test('tabs stay draggable; only an available Ref drops on the explorer',
   await svgTab.dragTo(page.locator('#explorer'));
   await expect(page.locator('#explorer-view-tabs .ref-tab'))
     .toHaveCount(2);
-  await expect(page.locator('#add-note-ref')).toBeDisabled();
 });
 
 test('Text, Note, and explorer tab order and content persist', async ({page}) => {
@@ -461,6 +473,6 @@ test('Text, Note, and explorer tab order and content persist', async ({page}) =>
   expect(await page.locator('#explorer-view-tabs [role="tab"]')
     .allTextContents()).toEqual(explorerOrder);
   await expect(tabControl(page, 'text', 'menu.text')
-    .locator('.document-tab-close')).toHaveText('O');
+    .locator('.document-tab-close')).toHaveText('●');
   await expect(page.locator('#fixture-result')).toContainText('Loaded file');
 });

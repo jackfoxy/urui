@@ -43,12 +43,18 @@ function evaluate(source) {
   const window = {
     confirm: () => true,
     prompt: () => null,
-    addEventListener: () => {}
+    addEventListener: () => {},
+    location: {href: 'http://localhost/apps/urui-fixture/'}
   };
   window.window = window;
   vm.runInNewContext(source, {
     window,
     document: stubDocument(),
+    //  the document stores start at boot: they read a shared source from
+    //  the url, restore nothing, and browse a tree that never answers
+    URL,
+    localStorage: {getItem: () => null, setItem: () => {}},
+    fetch: () => new Promise(() => {}),
     matchMedia: () => ({matches: false, addEventListener: () => {}}),
     requestAnimationFrame: (callback) => callback(),
     //  a bundle that queues its startup record needs timers to exist; it

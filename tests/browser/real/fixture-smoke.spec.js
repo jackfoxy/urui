@@ -26,7 +26,8 @@ test('fixture page presents the three areas', async ({page}) => {
   await expect(page.locator('.document-tabs')).toHaveCount(2);
   await expect(page.locator('[role="separator"]')).toHaveCount(2);
   await expect(page.locator('#help-panel')).toHaveAttribute('role', 'dialog');
-  await expect(page.locator('#clay-error-modal')).toHaveAttribute(
+  await expect(page.locator('#clay-error-modal')).toHaveCount(0);
+  await expect(page.locator('#urui-file-dialog')).toHaveAttribute(
     'role', 'dialog');
   await expect(page.locator('#file-context-menu')).toHaveAttribute(
     'role', 'menu');
