@@ -8,78 +8,139 @@ Column key: **Hoon** = the mold field in `sur/urui.hoon`; **json** = the key
 
 | Hoon | json | Emitter arm | Read by | Effect |
 | --- | --- | --- | --- | --- |
-| `app-id.name` | `appId.name` | `++app-id-json` | `++compact` only, as `data-app` | nothing reads it in urui |
+| `app-id.name` | `appId.name` | `++app-id-json` | `data-app` on the compact frame's `<body>` | nothing in the runtime reads it |
 | `app-id.title` | `appId.title` | ″ | `<title>`; docs tab label cleanup | |
 | `app-id.base` | `appId.base` | ″ | `loadDocsTree` fetches `${base}/doc.toc` | also the consumer's own route prefix |
 | `app-id.storage-key` | `appId.storageKey` | ″ | `++theme-bootstrap`, persistence banner | the localStorage key |
 | `app-id.storage-version` | `appId.storageVersion` | ″ | ″ | a record whose `version` differs is discarded whole |
-| `kinds` | `kinds` | `++doc-kind-json` | document-tabs banner, files banner | one tab store per entry |
-| `endpoints` | `endpoints` | `++endpoints-json` | `clayFileRequest` | §3 |
-| `limits` | `limits` | `++limits-json` | §4 | |
-| `slots` | `slots` | `++slot-json` | persistence banner | §5 |
-| `shortcuts` | `shortcuts` | `++shortcut-json` | `dispatchShortcut` | §6 |
+| `limits` | `limits` | `++limits-json` | §5 | |
+| `slots` | `slots` | `++slot-json` | persistence banner | §6 |
+| `shortcuts` | `shortcuts` | `++shortcut-json` | `dispatchShortcut` | §7 |
 | `statuses` | `statuses` | `++status-json` | `setStatus`; `++initial-status` | name → label map |
-| `docs-root` | `docsRoot` | `++unit-text-json` (`~` → json null) | documentation banner | prefixes the iframe src of a docs leaf **only** |
-| `share-param` | `shareParam` | `++share-json` | shared-source banner | absent ⇒ `decodeSource` throws |
-| `permanent-views` | `permanentViews` | `++view-json` | explorer banner | empty ⇒ compact frame, no explorer |
-| `ace-spec` | `ace` | `++ace-json` | `++config-js:urui-ace` only | the runtime never reads it |
-| `layout` | `layout` | `++config-json` | `let layout` in the shell-frame banner; `++full` draws `#workspace[data-layout]` and the splitter's orientation from it | the starting screen format; a saved `preferences.layout` wins |
-| `collapse` | `resultCollapse` | `++config-json` | `++heading-band` emits `#result-collapse` as the result pane's last action; `applyResultLayout` | bunts to `|`; without the control a saved `resultOpen: false` is ignored |
+| `docs-root` | `docsRoot` | `++unit-text-json` (`~` → null) | documentation banner | prefixes the iframe src of a docs leaf **only** |
+| `ace-spec` | `ace` | `++ace-json` | `docMount` reads `ace.global`; `++config-js:urui-ace` | the window property holding the Ace assets |
+| `layout` | `layout` | `++config-json` | shell-frame banner; `++full` draws `#workspace[data-layout]` | the starting screen format; a saved `preferences.layout` wins |
+| `collapse` | `resultCollapse` | `++config-json` | `++heading-band` emits `#result-collapse`; `applyResultLayout` | bunts to `|` |
+| `files` | `files` | `++files-json` (`~` → null) | `++documents` | §3; `~` turns the documents module off |
 
-`++number` emits `@ud` with `scot`'s dot separators stripped — json numbers
-cannot carry them. A `(unit @t)` becomes json `null`, never an empty string.
+Also emitted, from the `$shell-spec` rather than `$app-config`: `panes`
+(`++panes-json`, §2) and `permanentViews` (`++permanent-views`: the `fixed`
+list of the first `%views` level in the reference pane).
+
+`++number` emits `@ud` with `scot`'s dot separators stripped. A `(unit @t)`
+becomes json `null`, never an empty string.
 
 `statuses` is positional in one place: `++initial-status:urui-shell` renders
 the **first** entry's label in the editor pane and the **third** in every
-other pane. Fewer than three entries silently collapses to the first.
+other pane.
 
-## 2. `$doc-kind`
+## 2. Panes, bands, and tab levels
 
-| Field | json | Used for |
-| --- | --- | --- |
-| `name` | `name` | store key, tab-id prefix, `{kind}` in routes, `{kind}-document-tabs`, `{kind}-files`, `#save-{kind}` |
-| `label` | `label` | prompts, confirms, tree aria-label, fallback strip label |
-| `untitled` | `untitled` | label for a tab with no path |
-| `ext` | `ext` | the suffix shown in a tab label |
-| `leaf` | `leaf` | the Clay extension actually stored; `tabLabel` turns `left/txt` into `left.dot` when the last segment equals `leaf` |
-| `mime` | `mime` | nothing in urui — for the consumer's HTTP response |
-| `tabs` | `tabs` | whether `++document-strip` emits a strip |
-| `refs` | `refs` | whether an Add Ref control is enabled (`#add-{kind}-ref`) |
+`$shell-spec.panes` is `[reference editor result]`, each a `$pane`:
+`role` (becomes `data-role`; the runtime finds panes by it), `id`, `label`,
+`mode` (`%read-only` forbids `+`, close, and file writes whatever a level
+says), `kind` (names the pane for `{kind}-source-heading`), and `bands`.
 
-`ext` and `leaf` differ whenever a mark is reused: DOT stored as `%txt`,
-labelled `.dot`.
+A `$band` is `[name reveal item]`. Band order is the layout: a `%heading`
+before the `%tabs` band sits above the tabs. `reveal.key` persists the
+band's open state in the `paneBands` slot; `key=~` pins it open with no
+toggle.
 
-## 3. `$endpoints` and the wire
-
-Routes take `{kind}`, replaced with the kind name. Every request is `POST`;
-the response body is read as text.
-
-| `transport` | Path travels as | Body | Overwrite flag |
-| --- | --- | --- | --- |
-| `%header` | `path-header` header (omitted for a root browse: empty path + `browse`) | raw source, `text/plain; charset=utf-8`, absent for `browse` | `flag-header: 'true'` |
-| `%body` | json `path` array of segments (`[]` for root) | `{"path": [...], "source": "...", "overwrite": bool}`, `application/json` | `overwrite` field |
-
-| Response | Meaning to the runtime |
+| `$band-item` | Emits |
 | --- | --- |
-| 2xx | body is the result: file text for `load`, the browse json for `browse`, anything for `save`/`delete` |
-| 409 on `save` without `overwrite` | prompts `confirm`, retries once with the flag set |
-| any other non-2xx | throws with the response body, or `Clay request failed (<status>)` |
+| `[%label text]` | one line of text (`.pane-label`) |
+| `[%heading title status-id actions]` | title, status span, and the actions row; a store's actions and view toggle are appended after the consumer's |
+| `[%controls marl]` | the consumer's row, spliced bare |
+| `[%tabs levels]` | the depth-0 strip; deeper levels are generated by the runtime |
+| `[%panel id host body]` | the `$editor` host (if any), a store's load-error notice and preview host, then `div.pane-body#{id}` holding `body` |
 
-`browse` must answer `{"file": <bool>, "children": ["name", ...]}` —
-`++browse-json:urui-clay` builds exactly that. `browseClayNode` recurses over
-`children`, rejecting any child that is empty or contains `/`.
+`$tab-level.source`:
 
-Client-side paths pass `normalizeClayPath`: leading slashes stripped, no empty
-/ `.` / `..` segments, and `^[A-Za-z0-9._~/-]+$`. Server-side,
-`++relative-path:urui-clay` repeats the check in Hoon with `stab`, and
-`++file-path:urui-clay` appends the first extension unless an allowed one is
-already present. Neither side trusts the other.
+| Source | Tabs come from |
+| --- | --- |
+| `%views` | the explorer strip: `fixed` seeds it; docs and ref tabs are appended |
+| `%documents` | the `$store` named by `kind` |
+| `%fixed` | exactly `fixed` |
+| `%dynamic` | whatever `runtime.panes.set(pane, level, tabs)` was last given for that parent path |
 
-Auth is entirely the consumer's: `++require-auth:urui-http` exists and is
-tested, but **neither existing consumer calls it** — both inline their own
-401. Treat it as available, not as the established pattern.
+`$editor` is `[id label mode wrap read-only max-bytes]`. `docMount` reads
+`id`, `label`, and `mode` (empty → `ace-spec.mode`); `wrap`, `read-only`, and
+`max-bytes` are emitted but not read by the runtime.
 
-## 4. `$limits`
+## 3. `files`: stores, roots, trees
+
+`$files` = `[url stores trees]`. `url` is the one POST route of the file wire.
+
+`$store` = `[name noun untitled starter roots preview actions refs share]`:
+
+| Field | Used for |
+| --- | --- |
+| `name` | store key, tab-id prefix, `{store}-{action}` ids, `open:/save:/save-as:{store}` shortcut commands, the `kind` of its `%documents` level and of its slots |
+| `noun` | file dialog title ("Open Script", "Save Script As") |
+| `untitled` | draft labels: `untitled`, `untitled 2`, … (lowest unused) |
+| `starter` | the text of a new draft |
+| `roots` | where its files live (below) |
+| `preview` | `~` = no preview host; `` `%source `` / `` `%preview `` = the display a new tab starts in |
+| `actions` | which of `%open %save %save-as %copy %ref %browse` appear in the heading |
+| `refs` | whether its tabs can become explorer references |
+| `share` | `` `[param max param-max] ``: a url parameter carrying one shared draft |
+
+`$root` = `[scope marks ext save]`. A path is its segments relative to the
+file root, ending in its mark; it belongs to the root whose `scope` prefixes
+it and whose `marks` include its last segment. Labels are `{name}.{ext}`
+(`ext=~` shows the mark); clashes gain parent directories. `save=|` makes the
+root app-written: tabs from it are read-only in the editor, show no Save, and
+the wire refuses a browser `save` there.
+
+`$tree` = `[view store scopes]`: the explorer view whose `{view}-tree` holds
+it, and which roots it lists (`~` = all of the store's roots).
+
+## 4. The file wire and `urui-files`
+
+One POST, json body, `op` field. Paths are segment arrays; the client echoes
+the last `hash` it received as `base` and never computes one.
+
+| op | Request | Success |
+| --- | --- | --- |
+| browse | `{op, scope}` | `{ok: true, entries: [{path, kind}]}` |
+| load | `{op, path}` | `{ok: true, text, hash}` |
+| save | `{op, path, text, base, overwrite}` | `{ok: true, hash}` |
+| delete | `{op, path, base}` | `{ok: true}` |
+
+Failure is `{ok: false, error: {code, message, retryable, details}}`:
+
+| code | status | When |
+| --- | --- | --- |
+| `bad-request` | 400 (405 + `allow: POST` for a non-POST) | malformed json, unknown op, ill-typed field |
+| `unsupported-media` | 415 | not `application/json` |
+| `invalid-path` | 400 | bad segment, or a scope/mark the policy does not admit; a `save` into a `save=|` root |
+| `payload-too-large` | 413 | body over `max-bytes` |
+| `not-found` | 404 | load or delete of a missing file |
+| `exists` | 409 | save to an existing file with no `base` and no `overwrite` |
+| `changed` | 409 | `base` differs from the stored hash, no `overwrite` |
+| `unprocessable` | 422 | text does not convert to the mark |
+| `unavailable` | 503 | another save or delete is in flight |
+| `timeout` | 504 | Clay did not confirm in time |
+| `internal` | 500 | a scry or verification failed |
+
+The hash is `(scot %uv (shax text))` over the text a `load` would return.
+
+`lib/urui-files.hoon` public arms:
+
+| Arm | Sample | Product |
+| --- | --- | --- |
+| `make-policy` | `[files root strict]` | `policy`: the stores' roots, stock codecs (`wain` txt/csv/tab, `cord` md/html/svg, `json`), `verify=&`, `timeout=~s10`, `max-bytes=1.048.576`; adjust the product for extra codecs |
+| `handle` | `[policy bowl eyre-id req current=(unit pending)]` | `outcome` = `[cards next=(unit pending)]` |
+| `write` | `[policy bowl eyre-id rel text overwrite current]` | `outcome`; an app-computed save, allowed into `save=|` roots |
+| `take` | `[policy bowl wire sign-arvo current]` | `(unit outcome)`; `~` for a wire that is not `/urui-files` |
+
+With `verify`, a save passes `%warp` then `%info` then a `%wait`, and answers
+only after Clay reads back the expected text (or times out). Text that would
+read back unchanged is answered at once. The agent keeps `(unit pending)` in
+state it does not persist, authenticates before `++handle`, and forwards
+every sign to `++take`.
+
+## 5. `$limits`
 
 | Field | json | Default in JS | Used by |
 | --- | --- | --- | --- |
@@ -88,91 +149,76 @@ tested, but **neither existing consumer calls it** — both inline their own
 | `min-explorer` | `minExplorer` | 180 | explorer width clamp |
 | `divider` | `divider` | 10 | `maxExplorerWidth` |
 | `pane-min` / `pane-max` | `paneMin` / `paneMax` | 25 / 70 | `--editor-width` clamp, percent |
-| `narrow` | `narrow` | 760 | `matchMedia` in the runtime — **duplicated** as a literal `760px` in `++responsive:urui-css`; change both |
-| `max-source` | `maxSource` | 262144 | `validateSource`, every load/save/session/share path |
+| `narrow` | `narrow` | 760 | `matchMedia` in the runtime — **duplicated** as `760px` in `++responsive:urui-css`; change both |
+| `max-source` | `maxSource` | 262144 | `validateSource`: session text, shared links |
 
-## 5. Session record and slots
+## 6. Session record and slots
 
 One localStorage record: `{version: storageVersion, ...slots}`. A slot key
 containing `.` writes a nested object (`preferences.theme`).
 
 | `owner` | Read on save | Validated on load |
 | --- | --- | --- |
-| `%urui` | `readSlot`, by `kind`+`shape` then by **exact key** | per-key rules below |
-| `%app` | `options.session.read(key)` | `options.session.validate(key, raw)`; result handed back in the returned record, never applied |
+| `%urui` | `readSlot`: a store slot by `kind`+`shape`, else by **exact key** | per-key rules below |
+| `%app` | `options.session.read(key)` | `options.session.validate(key, raw)`; handed back in the returned record, never applied |
 
-| `shape` | With `kind` | Without `kind` |
+| `shape` | With `kind` (a store) | Without `kind` |
 | --- | --- | --- |
-| `%tabs` | the kind's tab list; each entry must match `{kind}-{n}`, carry a valid source and path, and be unique by id and by path; `options.tabs[kind].validate(candidate, base, seen)` may extend or veto | only the literal keys `docsTabs` and `refTabs` are recognised |
-| `%active` | the kind's active id; kept only if it is one of the accepted ids, else the first tab | — |
-| `%next` | the kind's counter, raised to `highestId(tabs)` | `nextDocs` / `nextRef`, same rule |
-| `%scalar` | — | dispatched by key: `paneWidth` (clamped), `explorerWidth` (floored), `explorerOpen` and `resultOpen` (anything but `false` is open), `explorerView` (must be an available view), `explorerOrder` (filtered and completed), `preferences.theme` (`validTheme`) |
-| `%record` | — | no urui meaning; for `%app` slots |
+| `%tabs` | the store's tabs without labels; each must match `{store}-{n}`, carry valid text, and be unique by id and by path; a path no root admits becomes a draft; `options.documents[store].fields.validate` may extend or veto | only `docsTabs` and `refTabs` |
+| `%active` | kept only if it is an accepted id, else the first tab | — |
+| `%next` | raised to `highestId(tabs)` | `nextDocs` / `nextRef`, same rule |
+| `%scalar` | — | `paneWidth`, `paneHeight`, `explorerWidth`, `explorerOpen`, `resultOpen`, `explorerView`, `explorerOrder`, `preferences.theme`, `preferences.layout`, `preferences.keybindings` |
+| `%record` | — | `paneBands`, `panePaths`, `fileTrees` (folded directories); anything else round-trips unvalidated |
 
-A `%urui` slot whose key is not in that list falls through to `default:` and
-is stored and restored verbatim, unvalidated. Document tabs are validated
-first because `%active` and `refTabs` point at their ids.
+A stored store tab is `{id, path, draft, text, clean, hash, selection,
+display, ...app fields}`; its label is always derived. A reference is
+`{id, kind, parentId, label, data}`; a ref kind with `persist: false` is not
+saved.
 
-Order of restoration inside `loadSession`: document tabs → docs tabs → ref
-tabs → everything else → `applySession` (urui's keys only) → return the whole
-record.
+Restoration order inside `loadSession`: store tabs → docs tabs → ref tabs →
+everything else → `applySession` (urui's keys only) → return the record.
 
-## 6. Shortcuts
+## 7. Shortcuts
 
-`config.shortcuts` entries are `[binding command when]`. Binding is parsed by
-lowercasing and splitting on `-`: the last part is the key, `ctrl`/`meta` are
-one primary modifier, `shift` and `alt` must match exactly.
+`config.shortcuts` entries are `[binding command when]`. The binding is
+lowercased and split on `-`: the last part is the key, `ctrl`/`meta` are one
+primary modifier, `shift` and `alt` must match exactly.
 
 | `when` | True when |
 | --- | --- |
 | `%always` | always |
-| `%editor` | an adapter reports `isFocused(target)` |
-| `%no-editor` | no adapter does |
-| `%preview` | `options.shortcuts.preview(event)` returns true — consumer-defined, independent of Ace focus |
+| `%editor` | an editor reports `isFocused(target)` |
+| `%no-editor` | none does |
+| `%preview` | `options.shortcuts.preview(event)` returns true |
 
-Dispatch is capture-phase on `document`. `Escape` is handled before any
-binding, in order: help panel → Clay error modal → context menu. A binding
-with no registered handler is skipped and the event continues. If nothing
-matched and focus is not in an editor, `options.shortcuts.onKeydown(event)`
-runs; returning `true` consumes the event.
+Dispatch is capture-phase on `document`. An open file or confirm dialog takes
+Escape and traps Tab first; then Escape closes, in order, settings → help →
+the file context menu. A binding with no registered handler is skipped. If
+nothing matched and focus is not in an editor,
+`options.shortcuts.onKeydown(event)` runs; `true` consumes the event.
 
-## 7. `$shell-spec`, areas, and the DOM
+## 8. DOM ids the runtime queries
 
-`$shell-spec` = `$app-config` + `brand`, `toolbar`, `areas`
-(`reference`/`editor`/`result`), `help`, `dialogs`, `styles`, `scripts`. Every
-marl slot is spliced without interpretation.
-
-`$area`: `role` (`%reference`/`%editor`/`%result`) becomes `data-role` — the
-runtime finds panes with it; `id`, `label`, `heading`, `status-id`, `kind`
-(names the `$doc-kind` for the tab strip and the `{kind}-source-heading` id),
-`strip`, `controls`, `body`, `secondary` (an `$editor` → `.editor-host`).
-
-Ids the runtime queries. **urui emits** unless marked:
+**urui emits** unless marked:
 
 | Id | Emitted by | Missing ⇒ |
 | --- | --- | --- |
 | `#workbench`, `#workspace`, `#splitter` | `++full` | layout arms throw on first use |
-| `#explorer-resizer`, `#explorer-collapse` | `++full`, `++explorer` | `applyExplorerLayout` throws |
-| `#explorer-tabs` | `++explorer` | tab queries return `[]`; `setExplorerView(…, true)` throws on focus |
-| `{view}-tab` / `-panel` / `-tree` | `++explorer-tabs`, `++explorer-panels` | that view silently does nothing |
-| `{kind}-document-tabs` | `++document-strip` | tabs never render (guarded) |
+| `#explorer-resizer`, `#explorer-collapse` | `++full`, `++views-strip` | `applyExplorerLayout` throws |
+| `{pane}-{level}-tabs` | `++tab-strip`, `++views-strip` | that level never renders (guarded) |
+| `{view}-tab` / `-panel` / `-tree` | `++explorer-tabs`, `++explorer-panels` | that view or tree silently does nothing |
+| `{store}-{action}`, `{store}-display`, `{store}-preview`, `{host}-load-error` | `++store-actions`, `++store-hosts` | that action or display is not wired |
+| `#urui-file-dialog…`, `#urui-confirm…`, `#urui-toast…` | `++document-dialogs` | the file dialog resolves `null`; confirm falls back to `window.confirm`; notices are dropped |
+| `#settings`, `#settings-modal`, `#close-settings`, `#theme` | `++frame-settings`, `++settings-modal` | settings never open |
 | `#help-panel`, `#close-help` | `++help-panel` | help arms throw |
-| `#clay-error-modal`, `#clay-error-message`, `#close-clay-error` | `++error-dialog` | every error path throws instead of showing |
 | `#file-context-menu`, `#file-context-open`, `#file-context-delete` | `++context-menu` | guarded, menu disabled |
-| `#theme`, `#help` | **consumer** toolbar | theme falls back to `data-theme`; help never opens |
+| `#help` | **consumer** toolbar | help never opens |
 | `#fallback-help-content`, `#docs-help-content`, `#docs-help-nav` | **consumer** help marl | docs nav silently absent |
-| `#browse-{kind}`, `#load-{kind}`, `#save-{kind}`, `#add-{kind}-ref` | **consumer** controls | that control is simply not wired |
 
 `options.elements` is merged over the map after the queries, so a consumer can
-supply or replace any node — including `editorStatus` / `resultStatus`, which
-`statusNode` prefers over its `.status, .pane-status` fallback.
+supply or replace any node — including `editorStatus` / `resultStatus`.
 
-Two structural quirks: a tall-attribute Sail element must have children, so
-`++document-strip` and `++secondary-host` emit a hidden `<span>`; and
-`++section` (compact) and `++workspace-area` (full) emit *different* pane
-markup for the same `$area`.
-
-## 8. `window.urui`
+## 9. `window.urui`
 
 Frozen; each group frozen individually. `boot` may be called once.
 
@@ -182,50 +228,59 @@ Frozen; each group frozen individually. `boot` may be called once.
 | `boot(hooks)` | urui: installs hooks, calls `hooks.onReady(api)` | throws on a second call or a non-object |
 | `runtime(options)` | urui: `createRuntime` | — |
 | `editor.adapter(host, options)` | urui: `createAceEditorAdapter` | — |
-| `status(...)`, `tabs.{create,close,select,update,list,active}`, `editor.{primary,secondary}`, `explorer.{show,refreshTree,addRef,openDocs}`, `session.{save,queue,get,set}`, `files.{browse,load,save,delete}`, `shortcuts.register`, `layout.{paneWidth,explorerWidth}`, `problem.{show,clear}` | **the consumer's hook object** | absent hook ⇒ `undefined` |
-| `dialog.help`, `dialog.error` | consumer hook | `undefined` |
+| `status`, `tabs.*`, `editor.{primary,secondary}`, `explorer.*`, `panes.*`, `session.*`, `files.*`, `shortcuts.register`, `layout.*`, `problem.*`, `dialog.{help,error}` | **the consumer's hook object** | absent hook ⇒ `undefined` |
 | `dialog.confirm`, `dialog.prompt` | consumer hook | `window.confirm` / `window.prompt` when the hook returns `undefined` |
 
-The facade is a dispatch table, not an implementation. `urui.tabs.create` does
-nothing unless the consumer implemented `hooks.tabs.create` — usually by
-delegating to `runtime.tabs.create`.
+The facade is a dispatch table, not an implementation. `urui.tabs.*` and
+`urui.files.*` are names a consumer may implement; urui's own document tabs
+and files are `runtime.documents`, not these.
 
-## 9. `createRuntime(options)`
+## 10. `createRuntime(options)`
 
 | Option | Read at | Contract |
 | --- | --- | --- |
 | `elements` | shell-frame banner | merged over the queried node map |
-| `editors` | `editors()` | array or function returning one; each item may implement `refresh`, `setTheme`, `isFocused` |
+| `editors` | `editors()` | extra editors (array or function) to resize, theme, and focus-test; store editors are included automatically |
 | `onChange` | `changed()` | replaces the queued session save entirely |
-| `onTheme(effective, selected)` | `applyTheme` | after every theme change |
+| `onTheme(effective, selected)` | theme banner | after every theme change |
 | `onHelpOpen()` | `setHelpOpen` | before help takes focus |
-| `onTabsRendered(name)` | `renderTabs` | after a strip re-renders |
 | `onResize()` | `wire` | on window resize, before editors refresh |
-| `tabs[kind]` | document-tabs banner | `defaults`, `dirty`, `onCapture`, `onActivate`, `afterActivate`, `onClose`, `empty`, `add`, plus `validate` used by session load |
-| `files[kind]` | Clay files banner | `validate`, `canSave`, `status`, `loaded`, `saved`, `error` |
+| `panes` | panes banner | `onSelect`, `onAdd`, `onClose`, `onRendered` |
+| `refs[kind]` | references banner | app reference kinds: `create(payload)`, `render(panel, ref)`, `validate(data)`, `persist` |
+| `documents[store]` | `++documents` | `fields.defaults(init)`, `fields.validate(saved, tab, ids)`, `activate(tab, choices)`, `afterActivate(tab, choices)`, `loaded(tab)`, `saved(tab)` |
+| `onFile({store, op, phase, path, error})` | `++documents` | reports each file operation; urui already shows the feedback |
+| `transport` | `++documents` | `{browse, load, save, remove}` replacing the json wire, for tests |
+| `acePlatform` | `docMount` | pins Ace's keyboard platform for the editors urui mounts |
 | `session` | persistence banner | `read(key)`, `validate(key, raw)` for `%app` slots |
 | `shortcuts` | shortcuts banner | `preview(event)`, `onKeydown(event)` |
 
-Unknown options are ignored; a misspelled one is a silent no-op.
+`choices` carries `previousId`, `restore` (the `start()` selection), `focus`,
+`reactivate`, and whatever a caller passed to `docs.select`.
 
-## 10. The runtime object
+## 11. `runtime.documents` and the returned object
 
-Internal but the real working surface. Groups: `elements`, `clamp`,
-`refreshEditors`, `files`, `shortcuts`, `tabs`, `theme`, `status`, `layout`,
-`explorer` (with `docs`, `refs`, `tree`, `context`), `session`, `dialogs`,
-`wire`. Read the `// ---- the runtime object ----` banner at the end of
-`++runtime` for the exact members — it is unfrozen and unversioned, so cite
-the banner rather than memory.
+`runtime.documents`: `start`, `list`, `active`, `get`, `create(store, {text,
+path, label, clean, fields, activate, focus})`, `update(store, id, {text,
+label, fields})`, `select(store, id, choices)`, `close`, `open(store, path?)`,
+`save(store, {as})`, `remove`, `dirty`, `addRef`, `editor(store)`,
+`pickPath({store, scope, title, extra, mark, value})`,
+`previews.register(mark, {mount, show, hide, render})`,
+`trees.refresh(view?)`, `trees.show(view)`. urui registers `md` and `html`
+previewers itself.
 
-Note `runtime.files.browse` is `refreshFileTree`, not the raw browse request,
-and `runtime.tabs.setList`/`explorer.docs.setList` splice in place because a
-consumer may hold the array by reference.
+Also on the runtime object: `notify(message, {kind, sticky, details})`,
+`confirm(kind, detail)` (a promise of a boolean), `copy(text)`, and the
+groups `shortcuts`, `panes`, `theme`, `status`, `layout`, `explorer` (with
+`docs`, `refs`, `context`), `session` (including `encodeSource` /
+`decodeSource(encoded, spec)`), `dialogs`, and `wire`. It is unfrozen and
+unversioned; read the `// ---- the runtime object ----` banner for the
+exact members.
 
-## 11. `createAceEditorAdapter(host, options)`
+## 12. `createAceEditorAdapter(host, options)`
 
 Throws if `window.ace` is missing, if `options.assets` is absent, or if the
-Beautify extension did not load — a consumer is expected to catch and show
-its own `#editor-load-error`.
+Beautify extension did not load. For store editors `docMount` catches it,
+shows `{host}-load-error`, and uses a stand-in so tabs keep working.
 
 | Option | Effect |
 | --- | --- |
@@ -237,52 +292,38 @@ its own `#editor-load-error`.
 The adapter returns `getSource`, `setSource`, `replaceRange`, `getSelection`,
 `setSelection`, `selectRange`, `offsetToPosition`, `positionToOffset`,
 `focus`, `onChange` (returns an unsubscribe), `isFocused`, `setDiagnostic`,
-`setTheme`, `refresh`. `setTheme`, `refresh`, and `isFocused` are the three the
-runtime itself calls, so anything passed as `options.editors` must implement
-them.
+`setTheme`, `setKeybindings`, `setReadOnly`, `refresh`.
 
-Per-call option records are separate: `setSource(source, {history, selection,
-notify})` where `history` is `undoable` (the default) or `reset` and any other
-value throws, `replaceRange(start, end, text, {selection, notify})` where
-`selection` is a range object, `'select'`, `'start'`, or omitted (cursor after
-the replacement), and `selectRange(start, end, {focus, reveal})`. All offsets
-are absolute character offsets, converted to Ace rows internally. A mutation
-suppresses Ace's own change events and then fires the adapter's listeners
-once, unless `notify` is exactly `false`.
+`setSource(source, {history, selection, notify})`: `history` is `undoable`
+(default) or `reset`; any other value throws. A mutation suppresses Ace's own
+change events and fires the adapter's listeners once, unless `notify` is
+exactly `false`.
 
-## 12. CSS sections
+## 13. CSS sections
 
-`++compose` welds the named sections in the order given; `+$section` is the
-closed set `%tokens %shell %explorer %tabs %dialogs %controls %responsive`.
+`++compose` welds sections in the order given; `+$section` is the closed set
+`%tokens %shell %explorer %tabs %dialogs %controls %responsive`.
 
 | Section | Owns |
 | --- | --- |
-| `%tokens` | every custom property on `:root` and the `data-effective-theme='dark'` override, including `--editor-width` and `--explorer-width` |
-| `%shell` | reset, header/toolbar, workbench and workspace grids, panes, status, splitter, state panel, `.sr-only` |
-| `%explorer` | the aside, panels, file-tree rows, resizer, context menu |
-| `%tabs` | all three strips: explorer, docs, document |
-| `%dialogs` | help panel and card, docs nav; the Clay modal reuses `.help-card` |
-| `%controls` | base button/select/input metrics, theme control, icon buttons, drawn icons |
+| `%tokens` | custom properties on `:root` and the dark override, including `--editor-width` and `--explorer-width` |
+| `%shell` | reset, header/toolbar, workbench and workspace grids, panes and bands, `.pane-body`, store actions, view toggle, editor and preview hosts, Markdown view |
+| `%explorer` | the aside, panels, file-tree rows and folders, resizer, context menu, reference tabs |
+| `%tabs` | all strips: explorer, docs, document, generated levels |
+| `%dialogs` | help panel and card, docs nav, file dialog, confirm dialog, toast |
+| `%controls` | base control metrics, theme control, icon buttons, drawn icons |
 | `%responsive` | the single `max-width: 760px` query |
 
-Ordering rules, from the core header: `%controls` before the component
-sections so equally specific selectors can override base control dimensions;
-`%responsive` last; consumer rules welded after all of them.
+`%controls` goes before the component sections; `%responsive` last; consumer
+rules after all of them.
 
-Known leak, not yet fixed: `%shell` contains three `#dot` rules — graph-viz's
-editor host id. `bin/check-purity.sh` greps `dot-language`, not bare `dot`, so
-the gate does not catch it.
-
-## 13. Documentation panel
-
-Three different sources, easy to conflate:
+## 14. Documentation panel
 
 | Step | Source | Failure |
 | --- | --- | --- |
-| availability probe | a hard-coded `GET /docs` on the same origin, requiring `text/html` | any failure ⇒ `disableDocsExplorer()`: docs tabs cleared, help shows the consumer's `#fallback-help-content` |
-| table of contents | `GET ${config.appId.base}/doc.toc`, requiring `text/plain` | not ok ⇒ the same fallback |
-| a leaf page | an iframe at `config.docsRoot + path` | none; the frame just fails to load |
+| availability probe | `GET /docs` on the same origin, requiring `text/html` | `disableDocsExplorer()`: docs tabs cleared, help shows `#fallback-help-content` |
+| table of contents | `GET ${config.appId.base}/doc.toc`, requiring `text/plain` | the same fallback |
+| a leaf page | an iframe at `config.docsRoot + path` | the frame just fails to load |
 
 `doc.toc` is an indented `/slug title` list: two spaces per level, one level
 of nesting, slugs matching `[A-Za-z0-9._~-]` with at most two segments.
-Malformed lines are skipped silently by `parseDocsToc`.

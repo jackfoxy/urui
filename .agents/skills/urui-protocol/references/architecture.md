@@ -1,9 +1,10 @@
 # Architecture: ownership, order, and flow
 
 Every claim here is traceable to a file and a named arm, section banner, or
-function. Verify before relying on it; `lib/urui-js.hoon` in particular is one
-Hoon core wrapping ~2,500 lines of emitted JavaScript, and the JavaScript is
-organised by `// ---- name ----` banners, not by Hoon arms.
+function. Verify before relying on it; `lib/urui-js.hoon` is a Hoon core of
+cords wrapping several thousand lines of emitted JavaScript, organised by
+`// ---- name ----` banners inside the `++runtime`, `++shortcuts`, and
+`++documents` arms.
 
 ## 1. Ownership map
 
@@ -11,42 +12,44 @@ organised by `// ---- name ----` banners, not by Hoon arms.
 | --- | --- | --- |
 | `$app-config`, `$shell-spec`, and every mold they nest | urui | `sur/urui.hoon` |
 | The json key names in `window.URUI_CONFIG` | urui | `++config-json` and its per-record arms, `lib/urui-config.hoon` |
-| Document structure, pane frames, resizers, tab strips, help panel, context menu, Clay error modal | urui | `++full`, `++compact`, `++section`, `++workspace-area`, `lib/urui-shell.hoon` |
-| Brand, toolbar, area controls, area bodies, help content, extra dialogs | consumer | marl slots in `$shell-spec` |
+| Document frame, pane sections, bands, reveal toggles, depth-0 tab strips, resizers, settings modal, help panel, file context menu | urui | `++build`, `++full`, `++compact`, `++pane`, `++band-nodes`, `lib/urui-shell.hoon` |
+| A store's heading actions and view toggle, its editor host, load-error notice, and preview host; the file dialog, confirm dialog, and toast | urui | `++store-actions`, `++panel-band`, `++store-hosts`, `++document-dialogs`, `lib/urui-shell.hoon` |
+| Brand, toolbar, heading actions, controls and panel marl, help content, extra dialogs | consumer | marl slots in `$shell-spec` and its bands |
 | `window.urui` (frozen facade) | urui | `++core`, `lib/urui-js.hoon` |
-| Everything `window.urui.tabs/editor/explorer/session/files/shortcuts/layout/problem/status` *does* | consumer | the hook object passed to `urui.boot` |
-| Tab stores, explorer views, docs tabs, ref tabs, file tree, session record, Clay requests, shortcut dispatch | urui | `++runtime` + `++files` + `++shortcuts`, `lib/urui-js.hoon` |
+| What `window.urui.tabs/editor/explorer/session/files/…` *do* | consumer | the hook object passed to `urui.boot` |
+| Panes and tab levels, explorer views, docs and ref tabs, session record, shortcut dispatch | urui | `++runtime` + `++shortcuts`, `lib/urui-js.hoon` |
+| Document stores: tabs, labels, dirtiness, editors, files, tree, file dialog, conflicts, previews, references, toast | urui | `++documents`, `lib/urui-js.hoon` |
+| Domain reactions to a document switch, app fields on a tab, previewers for app marks | consumer | `options.documents[store]`, `runtime.documents.previews.register` |
 | Ace adapter mechanics | urui | `++editor-adapter`, `lib/urui-js.hoon` |
 | Ace vendored asset routes and the `global` window property | consumer | `$ace-spec`, served by the consumer's agent |
 | Shared css sections and their contents | urui | `lib/urui-css.hoon` |
 | Cascade order and any application rules | consumer | the `(compose ...)` call and its own css |
-| HTTP routes, auth policy, Clay reads/writes, storage root | consumer | its Gall agent; helpers in `lib/urui-http.hoon`, `lib/urui-clay.hoon` |
-
-**Not owned by anyone yet:** `.pane-title`, `.pane-actions`, `.pane-body`
-(emitted by `++section`, the compact frame) and `.editor-host` have no rule in
-`lib/urui-css.hoon`. A compact-shell consumer must style them itself.
+| File wire: request validation, path policy, codecs, verified Clay writes, error envelope | urui | `lib/urui-files.hoon` (`++handle`, `++write`, `++take`) |
+| The file route, its auth check, the file root, `strict`, extra codecs, the agent's `pending` state | consumer | its Gall agent, calling `urui-files` |
 
 ## 2. Build order, in Hoon
 
-A consumer's web lib composes three assets. Order inside `++javascript` is a
-hard requirement:
+A consumer's web lib composes the page, the css, and the javascript. Order
+inside `++javascript` is a hard requirement:
 
 ```hoon
 ++  javascript
   %+  rap  3
-  :~  (emit:ucfg config)   ::  window.URUI_CONFIG = {...}
+  :~  (emit:ucfg spec)     ::  window.URUI_CONFIG = {...}
       core:ujs             ::  defines window.urui, reads URUI_CONFIG once
-      app-js               ::  the consumer: runtime, editors, wire, boot
+      app-js               ::  the consumer: runtime, hooks, boot
   ==
 ```
 
 `++core` captures `window.URUI_CONFIG` into `api.config` at definition time,
-so the config assignment must precede it. Consumer code must follow both.
+so the config assignment must precede it. `core:ujs` already contains the
+runtime, the shortcuts, the documents module, and the Ace adapter.
 
-The page comes from `(build:shell spec)`, which picks the frame by data:
-`permanent-views` empty → `++compact` (three areas, no explorer); non-empty →
-`++full` (explorer aside, workbench grid, both resizers, document tab strips,
-help panel, context menu, Clay error modal).
+The page comes from `(build:shell spec)`. `++has-views` picks the frame: a
+reference pane whose `%tabs` band carries a `%views` level gets `++full`
+(explorer aside, workspace, both resizers, settings, help, context menu);
+anything else gets `++compact`. With `files` set, `++document-dialogs` adds
+the file dialog, confirm dialog, and toast.
 
 ## 3. Load order, in the browser
 
@@ -64,20 +67,20 @@ help panel, context menu, Clay error modal).
 
 ## 4. Startup order, in consumer code
 
-Both existing consumers use this sequence; departures from it have specific
-consequences.
+Both consumers follow these constraints; the exact placement of `boot`
+differs (Obelisk calls it last, Graph Viz runs its startup inside `onReady`).
 
 | Step | Call | Why here |
 | --- | --- | --- |
-| 1 | `const runtime = window.urui.runtime({...})` | builds the element map and tab stores; must precede anything that touches them |
-| 2 | `urui.editor.adapter(host, {assets, ...})` per editor | pass `editors: () => [...]` so adapters can be built after the runtime; an array would capture them before they exist |
-| 3 | `runtime.wire()` | attaches every listener: capture-phase keydown, file controls, theme, help, error modal, context menu, resize |
-| 4 | `runtime.session.load()` | validates the stored record, applies urui's slots, returns the whole record so the consumer can read its own |
-| 5 | seed tabs, apply the consumer's own slots, `runtime.session.queue()` | a restored session only survives if the first state is written back |
-| 6 | `runtime.shortcuts.register(command, handler)` per `config.shortcuts` entry | an unregistered command is silently skipped by the dispatcher |
-| 7 | `window.urui.boot(hooks)` **last** | one-shot: a second call throws `urui.boot called more than once`; it sets the hook table and calls `onReady(api)` |
+| 1 | `const runtime = window.urui.runtime({...})` | builds the element map, panes, and stores; `options.documents` hooks are read later, so they may name functions defined below |
+| 2 | `runtime.wire()` | attaches every listener: capture-phase keydown, store actions and view toggles, theme, help, settings, context menu, drags, resize |
+| 3 | `runtime.session.load()` | validates the stored record, applies urui's slots (store tabs included), returns the whole record so the consumer can read its own |
+| 4 | `runtime.documents.start()` once | mounts each store's editor, adds a shared-link tab, gives every store a tab, shows each active one (`activate` with `restore: true`), and browses the trees |
+| 5 | `docs.editor(store)` | the adapter urui mounted, or a stand-in if Ace failed; bind domain `onChange` listeners here |
+| 6 | `runtime.shortcuts.register(command, handler)` | an unregistered command is skipped; urui registers `open:{store}`, `save:{store}`, `save-as:{store}` itself |
+| 7 | `window.urui.boot(hooks)` once | a second call throws `urui.boot called more than once`; it installs the hook table and calls `onReady(api)` synchronously |
 
-Before `boot`, every `window.urui.*` method is a no-op returning `undefined`
+Before `boot`, every `window.urui.*` dispatch method returns `undefined`
 (`invoke` finds no hook), except `config`, `runtime`, `editor.adapter`, and
 `dialog.confirm`/`dialog.prompt`, which fall back to `window.confirm` and
 `window.prompt`.
@@ -89,49 +92,50 @@ $app-config ──emit:urui-config──> window.URUI_CONFIG ──> createRunti
                                                           │
 $shell-spec ──build:urui-shell──> DOM (ids, data-role) ───┤
                                                           ▼
-user event ──> runtime listener ──> runtime state ──> DOM + localStorage
+user event ──> runtime listener ──> runtime / store state ──> DOM + localStorage
                                           │
-                                          └──> options.<hook> ──> consumer
+                                          └──> options.documents[store].* ──> consumer
+store file op ──fetch json──> config.files.url ──> agent ──handle:urui-files──> Clay
+Clay sign ──> agent on-arvo ──take:urui-files──> http response ──> store
+consumer ──> runtime.documents.* / runtime.<group>.* ──> runtime state
 consumer ──> window.urui.<method> ──> installed hook ──> consumer
-consumer ──> runtime.<group>.<method> ──> runtime state
-runtime.files.* ──fetch──> consumer HTTP route ──> Clay
 ```
 
-Two distinct consumer seams, easy to confuse:
+Two consumer seams, easy to confuse:
 
 - **`options.*`** (passed to `createRuntime`): urui calling *out* to the
-  application when its own state moves.
+  application — domain hooks per store, pane callbacks, session slots.
 - **`hooks.*`** (passed to `urui.boot`): the application's implementation of
   `window.urui.*`, for code that only has the facade — test harnesses, other
   scripts on the page. urui itself never calls these.
 
 ## 6. Naming invariants the runtime resolves literally
 
-These are string matches in `lib/urui-js.hoon`, not conventions:
-
 | Pattern | Built by | Resolved by |
 | --- | --- | --- |
-| `{view}-tab`, `{view}-panel`, `{view}-tree` | `++explorer-tabs`, `++explorer-panels` | `setExplorerView`, `treeForKind` |
-| `{kind}-files` — a permanent view's name **must** be the kind name plus `-files` | consumer `permanent-views` | `viewForKind` (explorer banner) |
-| `{kind}-document-tabs` | `++document-strip` | `tabContainer` (document tabs banner) |
-| `{kind}-{n}` tab ids, `docs-{n}`, `ref-{n}` | `createTab`, docs/ref sections | `idPattern` on session load |
-| `#browse-{kind}`, `#load-{kind}`, `#save-{kind}` | consumer controls | `wire` |
-| `{kind}` inside an endpoint route | consumer `endpoints` | `clayFileRequest` (`replaceAll`) |
-| Slot keys `paneWidth`, `explorerWidth`, `explorerOpen`, `explorerView`, `explorerOrder`, `docsTabs`, `nextDocs`, `refTabs`, `nextRef`, `preferences.theme` | consumer `slots` | `readSlot` / `loadSession`, by exact key |
+| `{pane}-{band}`, `{pane}-{band}-toggle` | `++band-nodes`, `++band-toggle` | panes banner, `wire` |
+| `{pane}-{level}-tabs` (depth-0 strip) | `++tab-strip`, `++strip-id` | `stripFor`; a store's strip via `tabContainer` |
+| `{view}-tab`, `{view}-panel`, `{view}-tree` | `++explorer-tabs`, `++explorer-panels` | `setExplorerView`; a store tree via `docRefreshTree` (`#${tree.view}-tree`) |
+| `{store}-{action}`, `{store}-display`, `{store}-preview` | `++store-actions`, `++store-hosts` | `documentsWire`, `docApplyActions`, `docApplyDisplay` |
+| `{host}-load-error` | `++store-hosts` | `docMount` |
+| `{kind}-source-heading` (editor pane with a kind and a title) | `++heading-band` | `docMount` labels the host with it |
+| `urui-file-dialog…`, `urui-confirm…`, `urui-toast…` | `++file-dialog`, `++confirm-dialog`, `++toast` | `docFileDialog`, `confirmDialog`, `notify` |
+| `{store}-{n}` tab ids, `docs-{n}`, `ref-{n}` | `docCreate`, docs and ref sections | `idPattern` on session load |
+| urui slot keys (`paneWidth`, `explorerView`, `refTabs`, `fileTrees`, …) | consumer `slots` | `readSlot` / `loadSession`, by exact key |
 
-`++explorer-panels` labels each tree from `kinds` **positionally** while the
-runtime resolves it **by name**. List `permanent-views` in the same order as
-`kinds`, or the label and the tree disagree.
+A `%documents` tab level's `kind` must name a store in `config.files.stores`;
+any other `kind` gives an empty level. A `$tree`'s `view` must be one of the
+`%views` level's `fixed` names, or its tree has no element to render into.
 
 ## 7. Public, seam, or internal
 
 | Tier | What | Stability |
 | --- | --- | --- |
-| **Public data contract** | every mold in `sur/urui.hoon`; the json keys `urui-config.hoon` emits | changing a key name breaks every consumer and every saved session that stores it |
+| **Public data contract** | every mold in `sur/urui.hoon`; the json keys `urui-config.hoon` emits | changing a key breaks every consumer and every saved record that stores it |
 | **Public browser api** | `window.urui`: `config`, `boot`, `runtime`, `editor.adapter`, and the frozen dispatch groups | frozen object; groups frozen individually |
-| **Consumer seam (in)** | the hook object given to `boot`; `options` given to `createRuntime` and `createAceEditorAdapter` | additive is safe; a renamed option silently becomes a no-op |
-| **Consumer seam (out)** | marl slots, `config.shortcuts` commands, per-kind `options.tabs`/`options.files` hooks, `options.session` | |
-| **DOM coupling** | every id in §6 plus `#workbench`, `#workspace`, `#splitter`, `#explorer-*`, `#help-panel`, `#close-help`, `#clay-error-*`, `#file-context-*`, and the consumer-supplied `#theme`, `#help`, `#fallback-help-content`, `#docs-help-content`, `#docs-help-nav` | a missing id is usually silent: `?.` and `?.()` guards make the feature disappear rather than throw |
-| **Wire contract** | request shape per `transport`, the browse json `{file, children}`, status codes 409 and non-2xx | shared with the consumer's agent |
-| **Storage contract** | `storageKey`, `storageVersion`, slot keys, per-shape validation | a version bump discards every stored record |
-| **Internal** | everything in the object `createRuntime` returns, the emitted function names, css selector internals | unfrozen and unversioned; a consumer may use it, but it is not a promise |
+| **Consumer seam (in)** | `createRuntime` options (`documents`, `refs`, `panes`, `session`, `shortcuts`, …); the hook object given to `boot` | additive is safe; a misspelled option is a silent no-op |
+| **Consumer seam (out)** | `runtime.documents` (`start`, `create`, `update`, `select`, `open`, `save`, `pickPath`, `previews`, `trees`, …), `runtime.notify/confirm/copy` | documented at the `++documents` banner and the design report |
+| **DOM coupling** | every id in §6 plus `#workbench`, `#workspace`, `#splitter`, `#explorer-*`, `#settings*`, `#help-panel`, `#close-help`, `#file-context-*`, and the consumer-supplied `#help`, `#fallback-help-content`, `#docs-help-content`, `#docs-help-nav` | a missing id is usually silent: `?.` guards make the feature disappear rather than throw |
+| **Wire contract** | the json ops, the error envelope and its codes, the `hash` token | shared between `++documents` and `urui-files`; both land together |
+| **Storage contract** | `storageKey`, `storageVersion`, slot keys, per-shape validation | a version bump discards every stored record; there is no migration |
+| **Internal** | everything else in the object `createRuntime` returns, emitted function names, css selector internals | unfrozen and unversioned |
