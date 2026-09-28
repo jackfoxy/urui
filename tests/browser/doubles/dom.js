@@ -309,7 +309,8 @@ function createDom() {
     ['#urui-file-dialog-path', 'input'], ['#urui-file-dialog-cancel', 'button'],
     ['#urui-file-dialog-confirm', 'button'], ['#urui-confirm-ok', 'button'],
     ['#urui-confirm-cancel', 'button'], ['#close-help', 'button'],
-    ['#close-settings', 'button']
+    ['#close-settings', 'button'], ['#file-context-open', 'button'],
+    ['#file-context-delete', 'button']
   ]) {
     elements[name].localName = tag;
   }
@@ -329,6 +330,11 @@ function createDom() {
     elements['#urui-confirm-cancel'], elements['#urui-confirm-ok']
   );
   elements['#settings-modal'].append(elements['#close-settings']);
+  elements['#file-context-menu'].setAttribute('role', 'menu');
+  for (const name of ['#file-context-open', '#file-context-delete']) {
+    elements[name].setAttribute('role', 'menuitem');
+    elements['#file-context-menu'].append(elements[name]);
+  }
   elements['#urui-toast'].setAttribute('aria-live', 'polite');
 
   //  Each consumer seeds its own explorer strip: graph-viz's two file

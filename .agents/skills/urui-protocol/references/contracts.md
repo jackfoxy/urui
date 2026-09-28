@@ -289,7 +289,18 @@ Also on the runtime object: `notify(message, {kind, sticky, details})`,
 `confirm(kind, detail)` (a promise of a boolean), `copy(text)`, and the
 groups `shortcuts`, `panes`, `theme`, `status`, `layout`, `explorer` (with
 `docs`, `refs`, `context`), `session` (including `encodeSource` /
-`decodeSource(encoded, spec)`), `dialogs`, and `wire`. It is unfrozen and
+`decodeSource(encoded, spec)`), `dialogs`, `a11y`, and `wire`.
+
+`a11y.menu(menu, {onClose})` drives a consumer's role=menu of role=menuitem
+buttons: `open(source, event)` places it (at the pointer for a contextmenu
+event, else beside `source`) and focuses the first item; Up/Down wrap,
+Home/End jump, Escape or Tab closes it and refocuses `source`; the
+dispatcher closes it on Escape; an outside click or a resize closes it.
+Hide items with the `hidden` attribute. `a11y.tablist(list)` gives
+role=tab buttons one tab stop (the aria-selected one), arrow-key wrapping
+(Up/Down under aria-orientation="vertical"), and Home/End; a key focuses
+and clicks the tab, so the consumer's click handler selects. Call its
+`sync()` after selecting without a click. It is unfrozen and
 unversioned; read the `// ---- the runtime object ----` banner for the
 exact members.
 

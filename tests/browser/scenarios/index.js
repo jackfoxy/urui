@@ -4,7 +4,7 @@
 
 const shell = [
   'shell', 'runtime', 'tabs', 'panes', 'explorer', 'docs', 'dialogs',
-  'files', 'session', 'shortcuts', 'editor-adapter'
+  'files', 'session', 'shortcuts', 'editor-adapter', 'a11y'
 ];
 const app = [];
 
