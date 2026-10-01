@@ -63,6 +63,8 @@ const selectors = [
   '#page-browse', '#page-display',
   '#page-files-tab', '#page-files-panel', '#page-files-tree',
   '#memo-editor', '#memo-editor-load-error', '#memo-preview', '#memo-display',
+  //  urui-fixture-web: the result pane's fullscreen toggle
+  '#result-fullscreen',
   '#urui-file-dialog', '#urui-file-dialog-title', '#urui-file-dialog-help',
   '#urui-file-dialog-root-field', '#urui-file-dialog-root',
   '#urui-file-dialog-list', '#urui-file-dialog-path-field',
@@ -316,6 +318,18 @@ function createDom() {
   ]) {
     elements[name].localName = tag;
   }
+  //  fullscreen toggles, as ++fullscreen-toggle:urui-shell draws them:
+  //  the fixture's expands its result pane, graph-viz's its preview
+  for (const [name, target, label] of [
+    ['#result-fullscreen', 'result-pane', 'result'],
+    ['#fullscreen-svg', 'preview-shell', 'SVG']
+  ]) {
+    const toggle = elements[name];
+    toggle.localName = 'button';
+    toggle.id = name.slice(1);
+    toggle.dataset.fullscreenTarget = target;
+    toggle.dataset.fullscreenLabel = label;
+  }
   for (const toggle of [
     '#page-display', '#svg-display', '#note-display', '#memo-display'
   ]) {
@@ -424,7 +438,12 @@ function createDom() {
       }
       return null;
     },
-    querySelectorAll: () => [],
+    querySelectorAll: (selector) => {
+      if (selector !== '[data-fullscreen-target]') return [];
+      return [...new Set(documentDescendants())].filter((item) => {
+        return item.dataset?.fullscreenTarget;
+      });
+    },
     getElementById: (id) => elements[`#${id}`] ||
       documentDescendants().find((item) => item.id === id) || null,
     importNode: (node) => node,

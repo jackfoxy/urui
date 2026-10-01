@@ -153,15 +153,20 @@ module.exports = async (env) => {
   assert.equal(orphan.label, 'first.md');
   assert.equal(docs.dirty('page', orphan.id), true);
 
-  // ---- an app-written root: read-only, no Save -----------------------------
+  // ---- an app-written root: read-only, Save and Save As disabled -----------
   opening = docs.open('page', ['exports', 'report', 'txt']);
   await reply({ok: true, text: 'report', hash: '0vreport'});
   const report = await opening;
   assert.equal(report.label, 'report.txt');
-  assert.equal(el('page-save').hidden, true);
-  assert.equal(el('page-editor').aceReadOnly, true);
-  docs.select('page', orphan.id);
   assert.equal(el('page-save').hidden, false);
+  assert.equal(el('page-save').disabled, true);
+  assert.equal(el('page-save-as').disabled, true);
+  assert.equal(el('page-editor').aceReadOnly, true);
+  assert.equal(await docs.save('page', {as: true}), undefined);
+  assert.equal(el('urui-file-dialog').hidden, true, 'no Save As by API');
+  docs.select('page', orphan.id);
+  assert.equal(el('page-save').disabled, false);
+  assert.equal(el('page-save-as').disabled, false);
   assert.equal(el('page-editor').aceReadOnly, false);
 
   // ---- references follow their tab -----------------------------------------
@@ -185,6 +190,24 @@ module.exports = async (env) => {
   el('urui-file-dialog-confirm').onclick();
   assert.deepEqual(await picking, ['exports', 'runs', 'latest', 'txt']);
   assert.equal(el('urui-file-dialog-extra').children.length, 0);
+
+  // ---- a dotted suffix names the format; a dot never enters a segment ------
+  let dotted = docs.pickPath({
+    store: 'page', scope: ['pages'], value: 'notes/plan.txt'
+  });
+  await env.tick();
+  await reply(entries());
+  el('urui-file-dialog-mark').value = 'md';
+  el('urui-file-dialog-confirm').onclick();
+  assert.deepEqual(await dotted, ['pages', 'notes', 'plan', 'txt']);
+  dotted = docs.pickPath({store: 'page', scope: ['pages'], value: 'plan.csv'});
+  await env.tick();
+  await reply(entries());
+  el('urui-file-dialog-confirm').onclick();
+  assert.equal(el('urui-file-dialog-error').hidden, false);
+  assert.match(el('urui-file-dialog-error').textContent, /\.md, \.txt/);
+  el('urui-file-dialog-cancel').onclick();
+  assert.equal(await dotted, null);
 
   // ---- Escape dismisses a document dialog -----------------------------------
   const cancelled = docs.pickPath({store: 'page', scope: ['pages']});

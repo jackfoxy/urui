@@ -22,6 +22,7 @@ Column key: **Hoon** = the mold field in `sur/urui.hoon`; **json** = the key
 | `layout` | `layout` | `++config-json` | shell-frame banner; `++full` draws `#workspace[data-layout]` | the starting screen format; a saved `preferences.layout` wins |
 | `collapse` | `resultCollapse` | `++config-json` | `++heading-band` emits `#result-collapse`; `applyResultLayout` | bunts to `|` |
 | `files` | `files` | `++files-json` (`~` → null) | `++documents` | §3; `~` turns the documents module off |
+| `tips` | `tips` (object, key → text) | `++config-json` | tooltips banner: `tip`, `applyTips` | replaces urui's default tooltips, by the keys in §8a |
 
 Also emitted, from the `$shell-spec` rather than `$app-config`: `panes`
 (`++panes-json`, §2) and `permanentViews` (`++permanent-views`: the `fixed`
@@ -85,7 +86,7 @@ the context menu's Delete is disabled.
 | `starter` | the text of a new draft |
 | `roots` | where its files live (below) |
 | `preview` | `~` = no preview host; `` `%source `` / `` `%preview `` = the display a new tab starts in |
-| `actions` | which of `%open %save %save-as %copy %ref %browse` appear in the heading |
+| `actions` | which of `%open %save %save-as %copy %ref %browse` appear in the heading; `%copy` is always the copy icon |
 | `refs` | whether its tabs can become explorer references |
 | `share` | `` `[param max param-max] ``: a url parameter carrying one shared draft |
 
@@ -93,8 +94,15 @@ the context menu's Delete is disabled.
 file root, ending in its mark; it belongs to the root whose `scope` prefixes
 it and whose `marks` include its last segment. Labels are `{name}.{ext}`
 (`ext=~` shows the mark); clashes gain parent directories. `save=|` makes the
-root app-written: tabs from it are read-only in the editor, show no Save, and
-the wire refuses a browser `save` there.
+root app-written: tabs from it are read-only in the editor, disable Save and
+Save As (by button, shortcut, and API alike), and the wire refuses a browser
+`save` there.
+
+A path typed in the file dialog never keeps a dot in a segment: `.` separates
+like `/`, so `notes/plan.txt` is `notes/plan/txt`. A last segment naming one
+of the root's `marks`, or its `ext` (standing for its first mark), is the
+mark, and wins over the format picker; a `.suffix` naming neither is refused
+in the dialog. Otherwise the picker's mark, or the root's first, is appended.
 
 `$tree` = `[view store scopes]`: the explorer view whose `{view}-tree` holds
 it, and which roots it lists (`~` = all of the store's roots).
@@ -232,6 +240,38 @@ event.
 `options.elements` is merged over the map after the queries, so a consumer can
 supply or replace any node — including `editorStatus` / `resultStatus`.
 
+## 8a. Tooltips and fullscreen
+
+Every button has a tooltip. urui's own carry a default, replaced by
+`app-config.tips` under these keys:
+
+| Key | Control | Default |
+| --- | --- | --- |
+| `{store}-{action}` | a store action | `++action-tip`, e.g. "Save this Script", "Copy this SVG" |
+| `{store}-display-source`, `{store}-display-preview` | the view toggle | "Show the source", "Show the preview" |
+| `result-collapse`, `result-expand` | `#result-collapse` | "Collapse {pane label}", "Expand {pane label}" |
+| `explorer-collapse`, `explorer-expand` | `#explorer-collapse` | "Collapse explorer", "Expand explorer" |
+| `tab-close`, `tab-close-unsaved` | a tab's close control | "Close tab", "Unsaved changes; close tab" |
+| `docs-tab-close`, `ref-tab-close` | an explorer tab's close control | "Close documentation tab", "Close reference" |
+| `file-actions` | a file row's `…` | "File actions" |
+| `urui-file-dialog-open`, `urui-file-dialog-save` | the file dialog's confirm | "Open the selected file", "Save to this path" |
+| `{id}`, `{id}-exit` | a fullscreen toggle | "Expand {label} to fullscreen", "Return {label} to its pane" |
+| any other id | that element | its markup title |
+
+A tab, a tree file, a dialog entry, a band toggle, and a `+` control are
+titled by their own data: label, path, or `reveal.label`/`add`. A button that
+reaches the page with no title, a consumer's included, is titled from its
+`aria-label` or text and kept in step with them; a title anyone sets wins.
+
+`(fullscreen-toggle:urui-shell id target label)` draws a button that expands
+the element whose id is `target` and back. The consumer places it, inside the
+target to keep it in reach. While expanded the target has `.is-fullscreen`,
+its `.fullscreen-only` descendants show, the toast moves inside it, and the
+editors refit; opening a urui modal leaves fullscreen first. A consumer reacts
+to the change on `document`'s `fullscreenchange`. Runtime:
+`runtime.fullscreen.toggle(button)`, `runtime.fullscreen.sync()`,
+`runtime.tip(key, fallback)`.
+
 ## 9. `window.urui`
 
 Frozen; each group frozen individually. `boot` may be called once.
@@ -352,7 +392,7 @@ exactly `false`.
 | `%explorer` | the aside, panels, file-tree rows and folders, resizer, context menu, reference tabs |
 | `%tabs` | all strips: explorer, docs, document, generated levels |
 | `%dialogs` | help panel and card, docs nav, file dialog, confirm dialog, toast |
-| `%controls` | base control metrics, theme control, icon buttons, drawn icons |
+| `%controls` | base control metrics, theme control, icon buttons, drawn icons, fullscreen state |
 | `%responsive` | the single `max-width: 760px` query |
 
 `%controls` goes before the component sections; `%responsive` last; consumer

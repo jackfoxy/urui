@@ -59,6 +59,8 @@
       layout=%columns
       collapse=&
       files=`fixture-files
+      ::  one replaced tooltip proves the override
+      tips=~[['result-fullscreen-exit' 'Back to the workspace']]
   ==
 ::
 ++  fixture-files
@@ -287,12 +289,18 @@
       label='Fixture result'
       mode=%read-write
       kind=`%note
-      :~  (pinned %head [%heading `'Result' `'result-status' ~])
+      :~  (pinned %head [%heading `'Result' `'result-status' result-actions])
           (pinned %controls [%controls result-controls])
           (pinned %tabs [%tabs ~[result-level view-level set-level]])
           %+  pinned  %body
           [%panel 'result-body' `secondary-editor result-body]
       ==
+  ==
+::
+++  result-actions
+  ::  urui's fullscreen toggle, expanding the whole pane.
+  ^-  marl
+  :~  (fullscreen-toggle:shell 'result-fullscreen' 'result-pane' 'result')
   ==
 ::
 ++  result-level
