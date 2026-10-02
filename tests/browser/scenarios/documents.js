@@ -1,0 +1,231 @@
+'use strict';
+
+// The store module, against urui-fixture-docs: one `page` store with a
+// root the user saves into (`pages`, md and txt) and one the app writes
+// (`exports`, txt), one tree, and every file action.
+
+const assert = require('node:assert/strict');
+
+const {fileWire} = require('./support.js');
+
+module.exports = async (env) => {
+  const {elements, descendants} = env;
+  const fixture = env.window.uruiDocsFixture;
+  assert.equal(fixture?.ready, true);
+  const {runtime} = fixture;
+  const docs = runtime.documents;
+  const el = (id) => elements[`#${id}`];
+
+  const {reply, entries} = fileWire(env);
+
+  // ---- start: one draft, the tree loads both roots ----------------------
+  let sent = await reply(entries(['pages', 'intro', 'md']));
+  assert.deepEqual(sent, {op: 'browse', scope: ['pages']});
+  sent = await reply(entries(['exports', 'report', 'txt']));
+  assert.deepEqual(sent, {op: 'browse', scope: ['exports']});
+  assert.equal(docs.list('page').length, 1);
+  const draft = docs.active('page');
+  assert.equal(draft.label, 'page');
+  assert.equal(docs.dirty('page', draft.id), false);
+  const tree = el('page-files-tree');
+  assert(descendants(tree).some((node) => {
+    return node.dataset?.path === 'pages/intro/md';
+  }));
+  assert.equal(el('page-display').hidden, false,
+    'a draft previews by its store\'s default mark');
+
+  // ---- labels: drafts count up, reusing the lowest --------------------------
+  const second = docs.create('page');
+  assert.equal(second.label, 'page 2');
+  await docs.close('page', second.id);
+  assert.equal(docs.create('page').label, 'page 2');
+  await docs.close('page', docs.active('page').id);
+
+  // ---- editing marks the tab dirty; its close control says so --------------
+  docs.select('page', draft.id);
+  const editor = docs.editor('page');
+  editor.setSource('# Plan\n\nSome *text*.', {history: 'reset'});
+  assert.equal(docs.active('page').text, '# Plan\n\nSome *text*.');
+  assert.equal(docs.dirty('page', draft.id), true);
+  const strip = el('editor-pane-document-tabs');
+  const close = descendants(strip).find((node) => {
+    return node.className === 'document-tab-close';
+  });
+  assert.match(close.getAttribute('aria-label'), /unsaved changes/);
+
+  // ---- Save As: dialog, exists, confirm, overwrite ------------------------
+  let saving = docs.save('page');
+  await env.tick();
+  assert.equal(el('urui-file-dialog').hidden, false);
+  await reply(entries());
+  assert.equal(el('urui-file-dialog-root-field').hidden, true,
+    'one saveable root: no location picker');
+  assert.equal(el('urui-file-dialog-mark-field').hidden, false,
+    'two marks: a format picker');
+  el('urui-file-dialog-path').value = 'plans/first';
+  el('urui-file-dialog-mark').value = 'md';
+  el('urui-file-dialog-confirm').onclick();
+  sent = await reply({
+    ok: false,
+    error: {code: 'exists', message: 'exists', retryable: false, details: []}
+  }, 409);
+  assert.deepEqual(sent, {
+    op: 'save', path: ['pages', 'plans', 'first', 'md'],
+    text: '# Plan\n\nSome *text*.', base: null, overwrite: false
+  });
+  assert.equal(el('urui-confirm').hidden, false);
+  assert.match(el('urui-confirm-message').textContent, /already exists/);
+  el('urui-confirm-ok').listeners.click();
+  sent = await reply({ok: true, hash: '0vfirst'});
+  assert.equal(sent.overwrite, true);
+  await saving;
+  await reply(entries(['pages', 'plans', 'first', 'md']));
+  await reply(entries());
+  const first = docs.active('page');
+  assert.equal(first.label, 'first.md');
+  assert.equal(first.hash, '0vfirst');
+  assert.equal(docs.dirty('page', first.id), false);
+  assert.equal(el('urui-toast').hidden, false);
+  assert.match(el('urui-toast-message').textContent, /Saved first\.md/);
+
+  // ---- a plain Save sends the hash back as `base` ---------------------------
+  editor.setSource('# Plan\n\nMore.', {history: 'reset'});
+  saving = docs.save('page');
+  sent = await reply({ok: true, hash: '0vsecond'});
+  assert.equal(sent.base, '0vfirst');
+  assert.equal(sent.overwrite, false);
+  await saving;
+  await reply(entries(['pages', 'plans', 'first', 'md']));
+  await reply(entries());
+
+  // ---- md previews; the toggle swaps editor and preview -------------------
+  assert.equal(el('page-display').hidden, false);
+  const [sourceButton, previewButton] = el('page-display').children;
+  previewButton.listeners.click();
+  assert.equal(el('page-preview').hidden, false);
+  assert.equal(el('page-editor').hidden, true);
+  assert(descendants(el('page-preview')).some((node) => {
+    return node.localName === 'h1' && descendants(node).some((text) => {
+      return text.textContent === 'Plan';
+    });
+  }));
+  sourceButton.listeners.click();
+  assert.equal(el('page-preview').hidden, true);
+  assert.equal(el('page-editor').hidden, false);
+
+  // ---- reopening: clean reloads, dirty asks first -------------------------
+  let opening = docs.open('page', ['pages', 'plans', 'first', 'md']);
+  sent = await reply({ok: true, text: 'from clay', hash: '0vthird'});
+  assert.deepEqual(sent, {op: 'load', path: ['pages', 'plans', 'first', 'md']});
+  await opening;
+  assert.equal(docs.list('page').length, 1, 'no second tab for one path');
+  assert.equal(docs.active('page').text, 'from clay');
+  editor.setSource('local edit', {history: 'reset'});
+  opening = docs.open('page', ['pages', 'plans', 'first', 'md']);
+  await env.tick();
+  assert.equal(el('urui-confirm').hidden, false);
+  assert.match(el('urui-confirm-message').textContent, /Discard unsaved/);
+  el('urui-confirm-cancel').listeners.click();
+  await opening;
+  assert.equal(env.requests.length, 0, 'declined: nothing loaded');
+  assert.equal(docs.active('page').text, 'local edit');
+
+  // ---- closing a dirty tab asks; declining keeps it ------------------------
+  const closing = docs.close('page', first.id);
+  await env.tick();
+  assert.equal(el('urui-confirm').hidden, false);
+  el('urui-confirm-cancel').listeners.click();
+  assert.equal(await closing, false);
+  assert.equal(docs.list('page').length, 1);
+
+  // ---- delete: the open tab becomes an unsaved draft ----------------------
+  const removing = docs.remove('page', ['pages', 'plans', 'first', 'md']);
+  await env.tick();
+  assert.match(el('urui-confirm-message').textContent, /cannot be undone/);
+  el('urui-confirm-ok').listeners.click();
+  sent = await reply({ok: true});
+  assert.equal(sent.op, 'delete');
+  assert.equal(await removing, true);
+  await reply(entries());
+  await reply(entries());
+  const orphan = docs.active('page');
+  assert.equal(orphan.path, null);
+  assert.equal(orphan.label, 'first.md');
+  assert.equal(docs.dirty('page', orphan.id), true);
+
+  // ---- an app-written root: read-only, Save and Save As disabled -----------
+  opening = docs.open('page', ['exports', 'report', 'txt']);
+  await reply({ok: true, text: 'report', hash: '0vreport'});
+  const report = await opening;
+  assert.equal(report.label, 'report.txt');
+  assert.equal(el('page-save').hidden, false);
+  assert.equal(el('page-save').disabled, true);
+  assert.equal(el('page-save-as').disabled, true);
+  assert.equal(el('page-editor').aceReadOnly, true);
+  assert.equal(await docs.save('page', {as: true}), undefined);
+  assert.equal(el('urui-file-dialog').hidden, true, 'no Save As by API');
+  docs.select('page', orphan.id);
+  assert.equal(el('page-save').disabled, false);
+  assert.equal(el('page-save-as').disabled, false);
+  assert.equal(el('page-editor').aceReadOnly, false);
+
+  // ---- references follow their tab -----------------------------------------
+  const ref = docs.addRef('page', orphan.id);
+  assert.equal(ref.kind, 'page');
+  assert.equal(ref.label, 'first.md');
+  editor.setSource('changed text', {history: 'reset'});
+  assert.equal(ref.data.text, 'changed text');
+
+  // ---- an app action uses the file dialog with its own field ---------------
+  const extra = new env.Element('select');
+  const picking = docs.pickPath({
+    store: 'page', scope: ['exports'], title: 'Save output', extra,
+    mark: false, value: 'runs/latest'
+  });
+  await env.tick();
+  assert.equal(el('urui-file-dialog-title').textContent, 'Save output');
+  assert.equal(el('urui-file-dialog-extra').children[0], extra);
+  assert.equal(el('urui-file-dialog-path').value, 'runs/latest');
+  await reply(entries(['exports', 'report', 'txt']));
+  el('urui-file-dialog-confirm').onclick();
+  assert.deepEqual(await picking, ['exports', 'runs', 'latest', 'txt']);
+  assert.equal(el('urui-file-dialog-extra').children.length, 0);
+
+  // ---- a dotted suffix names the format; a dot never enters a segment ------
+  let dotted = docs.pickPath({
+    store: 'page', scope: ['pages'], value: 'notes/plan.txt'
+  });
+  await env.tick();
+  await reply(entries());
+  el('urui-file-dialog-mark').value = 'md';
+  el('urui-file-dialog-confirm').onclick();
+  assert.deepEqual(await dotted, ['pages', 'notes', 'plan', 'txt']);
+  dotted = docs.pickPath({store: 'page', scope: ['pages'], value: 'plan.csv'});
+  await env.tick();
+  await reply(entries());
+  el('urui-file-dialog-confirm').onclick();
+  assert.equal(el('urui-file-dialog-error').hidden, false);
+  assert.match(el('urui-file-dialog-error').textContent, /\.md, \.txt/);
+  el('urui-file-dialog-cancel').onclick();
+  assert.equal(await dotted, null);
+
+  // ---- Escape dismisses a document dialog -----------------------------------
+  const cancelled = docs.pickPath({store: 'page', scope: ['pages']});
+  await env.tick();
+  await reply(entries());
+  runtime.shortcuts.dispatch({
+    key: 'Escape', preventDefault: () => {}, stopPropagation: () => {}
+  });
+  assert.equal(await cancelled, null);
+  assert.equal(el('urui-file-dialog').hidden, true);
+
+  // ---- the session keeps tabs, hashes, and folds ---------------------------
+  runtime.session.save();
+  const record = JSON.parse(env.saved.get(env.sessionKey));
+  assert.equal(record.pageTabs.length, 2);
+  assert.equal(record.pageTabs[1].hash, '0vreport');
+  assert.deepEqual(record.pageTabs[1].path, ['exports', 'report', 'txt']);
+  assert.equal(record.pageTabs[0].label, undefined, 'labels are derived');
+  assert.equal(record.activePageId, orphan.id);
+  assert.deepEqual(record.fileTrees, {});
+};
