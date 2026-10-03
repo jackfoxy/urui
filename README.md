@@ -1,14 +1,17 @@
 # urui
 
-Shared browser-UI shell for Urbit applications, in Hoon.
+Shared browser-UI shell for Urbit productivity applications, in Hoon.
 
-urui is the frame that [graph-viz][gv] grew and [Obelisk][ob] adopted: a
+The urui UI framework drives [graph-viz][gv] and [Obelisk][ob]: a
 three-pane workbench with a file explorer, document stores and tabs backed
 by Clay, an Ace editor host, previews, resizable panes, dialogs, menus,
-theming, and a session record — with no opinion about what any of it
+theming, drag-n-drop, and a session record — with no opinion about what any of it
 displays. It is **source only**. There is no installable `%urui` desk and no
 production agent here; a consuming application copies urui's files into its
 own desk and builds one page from them.
+
+Copy all the desk/files into the targe apps desk/ and point your clanker at
+the protocol and debugger skills in .agents/skills/.
 
 [gv]: https://github.com/jackfoxy/graph-viz
 [ob]: https://github.com/jackfoxy/obelisk
