@@ -41,10 +41,11 @@
   ^-  (list [suffix=@t asset=asset:uhttp])
   =/  js=@t  'text/javascript; charset=utf-8'
   =/  text=@t  'text/plain; charset=utf-8'
-  =/  html=@t  (page-for:web our)
+  ::  not `html`: that face would shadow zuse's +html below
+  =/  page=@t  (page-for:web our)
   %+  turn
-    :~  ['' 'text/html; charset=utf-8' html]
-        ['/' 'text/html; charset=utf-8' html]
+    :~  ['' 'text/html; charset=utf-8' page]
+        ['/' 'text/html; charset=utf-8' page]
         ['/app.js' js javascript:web]
         ['/app.css' 'text/css; charset=utf-8' css:web]
         ['/ace/ace.js' js ace-core]

@@ -98,6 +98,9 @@ root app-written: tabs from it are read-only in the editor, disable Save and
 Save As (by button, shortcut, and API alike), and the wire refuses a browser
 `save` there.
 
+`marks=~` admits any mark: the dialog then needs a typed `.mark`, and the
+format picker stays hidden.
+
 A path typed in the file dialog never keeps a dot in a segment: `.` separates
 like `/`, so `notes/plan.txt` is `notes/plan/txt`. A last segment naming one
 of the root's `marks`, or its `ext` (standing for its first mark), is the
@@ -115,7 +118,7 @@ the last `hash` it received as `base` and never computes one.
 | op | Request | Success |
 | --- | --- | --- |
 | browse | `{op, scope}` | `{ok: true, entries: [{path, kind}]}` |
-| load | `{op, path}` | `{ok: true, text, hash}` |
+| load | `{op, path}` | `{ok: true, text, hash}`, plus `readonly: true` when the file may not be written |
 | save | `{op, path, text, base, overwrite}` | `{ok: true, hash}` |
 | delete | `{op, path, base}` | `{ok: true}` |
 
@@ -131,17 +134,32 @@ Failure is `{ok: false, error: {code, message, retryable, details}}`:
 | `exists` | 409 | save to an existing file with no `base` and no `overwrite` |
 | `changed` | 409 | `base` differs from the stored hash, no `overwrite` |
 | `unprocessable` | 422 | text does not convert to the mark |
+| `read-only` | 403 | a save or delete of a `%view` file, a file read through `view`, or a location `locate` marks unwritable |
 | `unavailable` | 503 | another save or delete is in flight |
 | `timeout` | 504 | Clay did not confirm in time |
 | `internal` | 500 | a scry or verification failed |
 
 The hash is `(scot %uv (shax text))` over the text a `load` would return.
 
+Codecs: `%wain`, `%cord`, `%json` are pure; `%mime` reads and writes text
+through the mark's own mime conversion on the file's desk (the mark must
+exist there; the expected read-back is its canonical text); `%view` is
+read-only, its text from `view`. A mark absent from `codecs` takes
+`fallback`. A file its codec cannot decode loads through `view` as
+read-only when `view` is set.
+
+`locate` (`$-([bowl path] (each location failure))`, `location =
+[beak rel write]`) puts wire paths anywhere in clay: another desk, an old
+case. It must map a path's children to its location's children (browse
+relies on it). An unwritable location loads `readonly` and refuses
+changes; `locate`'s own failure is answered as given.
+
 `lib/urui-files.hoon` public arms:
 
 | Arm | Sample | Product |
 | --- | --- | --- |
-| `make-policy` | `[files root strict]` | `policy`: the stores' roots, stock codecs (`wain` txt/csv/tab, `cord` md/html/svg, `json`), `verify=&`, `timeout=~s10`, `max-bytes=1.048.576`; adjust the product for extra codecs |
+| `make-policy` | `[files root strict]` | `policy`: the stores' roots, stock codecs (`wain` txt/csv/tab, `cord` md/html/svg, `json`), `verify=&`, `timeout=~s10`, `max-bytes=1.048.576`, `fallback=~`, `locate=~`, `view=~`; adjust the product for the rest |
+| `resolve` | `[policy bowl rel]` | `(each location failure)`: `locate`'s answer, or `rel` under `root` on our desk at now |
 | `handle` | `[policy bowl eyre-id req current=(unit pending)]` | `outcome` = `[cards next=(unit pending)]` |
 | `write` | `[policy bowl eyre-id rel text overwrite current]` | `outcome`; an app-computed save, allowed into `save=|` roots |
 | `take` | `[policy bowl wire sign-arvo current]` | `(unit outcome)`; `~` for a wire that is not `/urui-files` |
@@ -302,6 +320,7 @@ and files are `runtime.documents`, not these.
 | `panes` | panes banner | `onSelect`, `onAdd`, `onClose`, `onRendered` |
 | `refs[kind]` | references banner | app reference kinds: `create(payload)`, `render(panel, ref)`, `validate(data)`, `persist` |
 | `documents[store]` | `++documents` | `fields.defaults(init)`, `fields.validate(saved, tab, ids)`, `activate(tab, choices)`, `afterActivate(tab, choices)`, `loaded(tab)`, `saved(tab)` |
+| `contextMenu` | the file context menu banner | `items: [{id, label, title, danger}]` appended between Open and Delete as `#file-context-{id}`; `state(target)` → `{[id]: {hidden, disabled}}` for any item, `open` and `delete` included, on every open; `select(id, target)` |
 | `onFile({store, op, phase, path, error})` | `++documents` | reports each file operation; urui already shows the feedback |
 | `transport` | `++documents` | `{browse, load, save, remove}` replacing the json wire, for tests |
 | `acePlatform` | `docMount` | pins Ace's keyboard platform for the editors urui mounts |
@@ -318,7 +337,8 @@ path, label, clean, fields, activate, focus})`, `update(store, id, {text,
 label, fields})`, `select(store, id, choices)`, `close`, `open(store, path?)`,
 `save(store, {as})`, `remove`, `dirty`, `addRef`, `editor(store)`,
 `pickPath({store, scope, title, extra, mark, value})`,
-`previews.register(mark, factory)`, `trees.refresh(view?)`,
+`previews.register(mark, factory)`, `previews.get(mark)`,
+`trees.refresh(view?)`,
 `trees.show(view)`. urui registers `md` and `html` previewers itself.
 
 A previewer is a factory, not an object: `factory({host, store})` mounts
@@ -341,6 +361,14 @@ Also on the runtime object: `notify(message, {kind, sticky, details})`,
 groups `shortcuts`, `panes`, `theme`, `status`, `layout`, `explorer` (with
 `docs`, `refs`, `context`), `session` (including `encodeSource` /
 `decodeSource(encoded, spec)`), `dialogs`, `a11y`, `start`, and `wire`.
+`explorer.context.open(store, path, source, event, detail)` opens the
+file context menu on any target; `detail` is merged into the target the
+items act on, so a consumer's own tree can use it. `dialogs.modal(element,
+{close, fallback})` → `{open(focus), close(restoreFocus), isOpen}` puts a
+consumer dialog on the modal controller, ranked above settings and below
+the file and confirm dialogs.
+A tab loaded with `readonly` keeps `readonly: true`, persists it, and is
+read-only like a tab from a `save=|` root.
 `explorer.onChange(fn)` calls `fn({view, open})` after every view switch and
 every collapse or expand, and returns an unsubscribe.
 
