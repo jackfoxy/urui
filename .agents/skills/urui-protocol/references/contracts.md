@@ -158,7 +158,7 @@ changes; `locate`'s own failure is answered as given.
 
 | Arm | Sample | Product |
 | --- | --- | --- |
-| `make-policy` | `[files root strict]` | `policy`: the stores' roots, stock codecs (`wain` txt/csv/tab, `cord` md/html/svg, `json`), `verify=&`, `timeout=~s10`, `max-bytes=1.048.576`, `fallback=~`, `locate=~`, `view=~`; adjust the product for the rest |
+| `make-policy` | `[files root strict]` | `policy`: the stores' roots, stock codecs (`wain` txt/csv/tab, `cord` html/svg, `mime` md, `json`), `verify=&`, `timeout=~s10`, `max-bytes=1.048.576`, `fallback=~`, `locate=~`, `view=~`; adjust the product for the rest |
 | `resolve` | `[policy bowl rel]` | `(each location failure)`: `locate`'s answer, or `rel` under `root` on our desk at now |
 | `handle` | `[policy bowl eyre-id req current=(unit pending)]` | `outcome` = `[cards next=(unit pending)]` |
 | `write` | `[policy bowl eyre-id rel text overwrite current]` | `outcome`; an app-computed save, allowed into `save=|` roots |

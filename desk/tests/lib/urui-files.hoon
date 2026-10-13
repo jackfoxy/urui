@@ -229,7 +229,7 @@
     (expect !>(=(`%wain (file-codec:ufiles policy /scripts/a/b/txt |))))
     (expect !>(=(`%wain (file-codec:ufiles policy /results/r1/csv |))))
     (expect !>(=(`%json (file-codec:ufiles policy /results/r1/json |))))
-    (expect !>(=(`%cord (file-codec:ufiles policy /results/r1/md |))))
+    (expect !>(=(`%mime (file-codec:ufiles policy /results/r1/md |))))
     (expect !>(=(`%wain (file-codec:ufiles policy /results/r1/noun |))))
     (expect !>(=(~ (file-codec:ufiles plain /results/r1/noun |))))
     (expect !>(=(~ (file-codec:ufiles policy /results/r1/csv &))))

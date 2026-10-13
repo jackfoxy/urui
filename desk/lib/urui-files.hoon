@@ -80,11 +80,14 @@
 ::  +|  Constants
 ::
 ++  stock-codecs
+  ::  md is a wain on %base but a cord where %docs serves it, so it
+  ::  converts through the mark on the file's own desk.
+  ::
   ^-  (list [mark=@tas =codec])
   :~  [%txt %wain]
       [%csv %wain]
       [%tab %wain]
-      [%md %cord]
+      [%md %mime]
       [%html %cord]
       [%svg %cord]
       [%json %json]
