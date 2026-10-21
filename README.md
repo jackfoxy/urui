@@ -74,7 +74,7 @@ smallest.
    `statuses`, the `ace-spec`, the starting `layout`, and `files`.
 
 4. **Build one `$shell-spec`**: that config, the `brand`, `toolbar`, `help`,
-   `dialogs`, and `head` marl, the styles and scripts, and three
+   `dialogs`, `head`, and `settings` marl, the styles and scripts, and three
    `$pane`s — reference, editor, result. A pane is an ordered stack of
    bands (`%tabs`, `%heading`, `%controls`, `%label`, `%panel`); a
    `%tabs` band's levels are `%views` (the explorer), `%documents` (one

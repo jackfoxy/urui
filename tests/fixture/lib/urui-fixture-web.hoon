@@ -162,6 +162,7 @@
           '/apps/urui-fixture/app.js'
       ==
       head=~
+      settings=~
   ==
 ::
 ++  brand

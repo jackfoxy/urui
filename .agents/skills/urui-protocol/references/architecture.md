@@ -14,7 +14,7 @@ cords wrapping several thousand lines of emitted JavaScript, organised by
 | The json key names in `window.URUI_CONFIG` | urui | `++config-json` and its per-record arms, `lib/urui-config.hoon` |
 | Document frame, pane sections, bands, reveal toggles, depth-0 tab strips, resizers, settings modal, help panel, file context menu | urui | `++build`, `++full`, `++compact`, `++pane`, `++band-nodes`, `lib/urui-shell.hoon` |
 | A store's heading actions and view toggle, its editor host, load-error notice, and preview host; the file dialog, confirm dialog, and toast | urui | `++store-actions`, `++panel-band`, `++store-hosts`, `++document-dialogs`, `lib/urui-shell.hoon` |
-| Brand, toolbar, head extras, heading actions, controls and panel marl, help content, extra dialogs | consumer | marl slots in `$shell-spec` and its bands |
+| Brand, toolbar, head extras, heading actions, controls and panel marl, help content, extra dialogs, extra Settings fields | consumer | marl slots in `$shell-spec` and its bands |
 | `window.urui` (frozen facade) | urui | `++core`, `lib/urui-js.hoon` |
 | What `window.urui.tabs/editor/explorer/session/files/…` *do* | consumer | the hook object passed to `urui.boot` |
 | Panes and tab levels, explorer views, docs and ref tabs, session record, shortcut dispatch | urui | `++runtime` + `++shortcuts`, `lib/urui-js.hoon` |
@@ -51,7 +51,10 @@ reference pane whose `%tabs` band carries a `%views` level gets `++full`
 anything else gets `++compact`. With `files` set, `++document-dialogs` adds
 the file dialog, confirm dialog, and toast. `++compact` is presentation
 only: a spec with `files` set and no `%views` level crashes in `++build`.
-Both frames append `head` marl (favicon, meta) after the styles.
+Both frames append `head` marl (favicon, meta) after the styles, and
+`settings` marl at the end of the Settings card, after urui's theme,
+keybinding, and layout fields. urui does not bind or persist consumer
+settings controls; the consumer's own script does.
 
 ## 3. Load order, in the browser
 
