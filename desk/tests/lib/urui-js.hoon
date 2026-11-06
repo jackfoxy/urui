@@ -536,6 +536,27 @@
   |=  [source=tape needle=tape]
   (expect !>((has needle source)))
 ::
+++  test-json-wire-contract
+  ::  One POST and one envelope decode for every consumer route, with
+  ::  the error carrying what the toast and the retry paths read.
+  ::  obelisk and heathcliff each had their own copy of this.
+  =/  source  (trip runtime:ujs)
+  =/  needles=(list tape)
+    :~  "async function request(url, body, options = \{})"
+        "function requestError(body, status)"
+        "credentials: 'same-origin'"
+        "'content-type': 'application/json'"
+        "Server returned invalid JSON"
+        "raised.retryable = Boolean(error.retryable)"
+        "raised.code = error.code ?? null"
+        "options.failed"
+        "parsed?.ok === false"
+    ==
+  %-  zing
+  %+  turn  needles
+  |=  needle=tape
+  (expect !>((has needle source)))
+::
 ++  test-key-badge-contract
   ::  A declared chord puts its binding on its control -- in
   ::  `aria-keyshortcuts`, in the tooltip, and as a <kbd> badge -- so a
