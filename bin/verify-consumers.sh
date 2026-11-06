@@ -33,6 +33,9 @@ if [[ ${#CONSUMERS[@]} -eq 0 ]]; then
 fi
 
 "$ROOT/bin/check-purity.sh"
+#  The Vim manifest is generated from the vendored bundle; a stale one
+#  would let the conflict gate clear a chord Vim actually takes.
+node "$ROOT/bin/vim-chords.js" --check
 
 status=0
 checked=0
@@ -68,6 +71,13 @@ for name in "${CONSUMERS[@]}"; do
       echo "builds   $name"
     else
       echo "BUILD    $name (asset-digest.sh --spec $(basename "$spec"))" >&2
+      status=1
+    fi
+    #  The conflict gate: cheap, and it reads the consumer's own chord
+    #  table and its own exceptions file.
+    if ! (cd "$dest" && node --test \
+        tests/browser/shortcut-conflicts.test.js >/dev/null 2>&1); then
+      echo "CHORDS   $name (tests/browser/shortcut-conflicts.test.js)" >&2
       status=1
     fi
     #  Every suite the consumer's desk carries, not only the synced

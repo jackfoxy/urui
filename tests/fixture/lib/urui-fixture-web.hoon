@@ -130,14 +130,15 @@
 ::
 ++  shortcuts
   ::  One chord of every shape the contract allows, so the conflict
-  ::  gate has a case for each: a %free app chord, urui's two dialog
-  ::  chords as documented %override conflicts, a save for each store,
-  ::  a %gated copy, and two %preview view commands.
+  ::  gate has a case for each: urui's two dialog chords and Ctrl-Enter
+  ::  as documented %override conflicts, a %free save for each store, a
+  ::  %gated copy, and two %preview view commands.
   ::
-  ::  Ctrl-0 fits and Ctrl-1 resets, matching graph-viz.  The two were
-  ::  inverted here, and this fixture is what the gate reads.
+  ::  Ctrl-Enter was declared %free until the gate pointed out that the
+  ::  pinned Ace table claims it.  Ctrl-0 fits and Ctrl-1 resets,
+  ::  matching graph-viz; the two were inverted here.
   ^-  (list shortcut:urui)
-  :~  ['Ctrl-Enter' 'echo' %always %free `'Echo the source']
+  :~  ['Ctrl-Enter' 'echo' %always %override `'Echo the source']
       ['F1' 'help' %always %override `'Help']
       ['F2' 'settings' %always %override `'Settings']
       ['Ctrl-S' 'save:text' %always %free `'Save the text']

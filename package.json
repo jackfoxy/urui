@@ -2,12 +2,12 @@
   "name": "urui-browser-tests",
   "private": true,
   "scripts": {
-    "test:purity": "bin/check-purity.sh",
     "test:sync": "bin/verify-consumers.sh",
+    "test:purity": "bin/check-purity.sh",
+    "test:shortcuts": "node --test tests/browser/ace-shortcuts.test.js tests/browser/shortcut-conflicts.test.js",
+    "test:assets": "node --test tests/browser/ace-assets-routed.test.js",
     "test:browser": "tests/browser/run.sh",
-    "test:browser:real": "playwright test --config tests/browser/real/playwright.config.js",
-    "test:shortcuts": "node --test tests/browser/ace-shortcuts.test.js",
-    "test:assets": "node --test tests/browser/ace-assets-routed.test.js"
+    "test:browser:real": "playwright test --config tests/browser/real/playwright.config.js"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1"

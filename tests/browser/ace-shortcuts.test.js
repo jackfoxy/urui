@@ -8,18 +8,7 @@ const manifestPath = path.join(
   'ace-win-linux-shortcuts.json'
 );
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-const fixtureSource = fs.readFileSync(path.join(
-  __dirname,
-  '../fixture/lib/urui-fixture-web.hoon'
-), 'utf8');
-
-function fixtureBindings() {
-  const arm = fixtureSource.match(
-    /\+\+  shortcuts\n[\s\S]*?\n::\n\+\+  spec/
-  );
-  assert.ok(arm, 'fixture shortcut arm is present');
-  return [...arm[0].matchAll(/\['([^']+)'/g)].map((match) => match[1]);
-}
+const {table} = require('./chords.js');
 
 test('manifest pins the Windows/Linux test environment', () => {
   assert.equal(manifest.scope.acePlatform, 'win');
@@ -119,14 +108,20 @@ test('manifest records final global shortcut accounting', () => {
   }]);
 });
 
-test('fixture chords have one pinned Ace override', () => {
-  const bindings = fixtureBindings();
-  assert.deepEqual(bindings, [
-    'Ctrl-Enter', 'Ctrl-S', 'Ctrl-Shift-S', 'Ctrl-0', 'Ctrl-1'
-  ]);
+test('every fixture chord claimed by Ace is a declared override', () => {
+  //  Which chords the fixture binds, and whether each collides, is the
+  //  conflict gate's business -- shortcut-conflicts.test.js, which reads
+  //  the same arm and both keymap manifests.  What belongs here is the
+  //  narrower claim that this manifest and that gate agree about Ace.
+  const {chords} = table(path.resolve(__dirname, '../..'));
   const aceBindings = new Set(manifest.rows.flatMap((row) => row.bindings));
-  assert.deepEqual(bindings.filter((binding) => aceBindings.has(binding)), [
-    'Ctrl-Enter'
+  const colliding = chords
+    .filter((chord) => aceBindings.has(chord.binding))
+    .map((chord) => [chord.binding, chord.policy]);
+  assert.deepEqual(colliding, [
+    ['Ctrl-Enter', 'override'],
+    ['F1', 'override'],
+    ['F2', 'override']
   ]);
 });
 

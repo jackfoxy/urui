@@ -27,12 +27,14 @@ module.exports = async (env) => {
   //  `label` names it for the badge and the help table
   assert.deepEqual(
     shortcuts.map((shortcut) => shortcut.policy),
-    ['free', 'override', 'override', 'free', 'free', 'gated', 'free', 'free']
+    ['override', 'override', 'override', 'free', 'free', 'gated', 'free', 'free']
   );
   assert.deepEqual(
     shortcuts.filter((shortcut) => shortcut.policy === 'override')
       .map((shortcut) => shortcut.command),
-    ['help', 'settings']
+    //  Ctrl-Enter is Ace's fullscreen in the pinned table; the gate
+    //  rejected it as %free
+    ['echo', 'help', 'settings']
   );
   assert.ok(shortcuts.every((shortcut) => shortcut.label));
   //  Ctrl-0 fits and Ctrl-1 resets, as in graph-viz; they were inverted

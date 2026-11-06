@@ -31,3 +31,6 @@ tests/browser/doubles/index.js
 tests/browser/doubles/media.js
 tests/browser/doubles/storage.js
 tests/browser/ace-win-linux-shortcuts.json
+tests/browser/vim-chords.json
+tests/browser/chords.js
+tests/browser/shortcut-conflicts.test.js

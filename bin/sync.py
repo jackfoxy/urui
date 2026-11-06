@@ -41,9 +41,14 @@ def manifest():
     if (ROOT / "tests/browser/doubles/index.js").is_file():
         paths += [p.relative_to(ROOT).as_posix() for p in sorted(
             (ROOT / "tests/browser/doubles").rglob("*")) if p.is_file()]
-    shortcut = "tests/browser/ace-win-linux-shortcuts.json"
-    if (ROOT / shortcut).is_file():
-        paths.append(shortcut)
+    # The conflict gate and the two keymap manifests it reads.  Not the
+    # exceptions file: each app justifies its own collisions.
+    for shared in ("tests/browser/ace-win-linux-shortcuts.json",
+                   "tests/browser/vim-chords.json",
+                   "tests/browser/chords.js",
+                   "tests/browser/shortcut-conflicts.test.js"):
+        if (ROOT / shared).is_file():
+            paths.append(shared)
     return paths
 
 
