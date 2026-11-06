@@ -1,0 +1,13 @@
+# face   path (relative to the consumer checkout), in binding order
+@assets  page:our css javascript:our
+urui    desk/sur/urui.hoon
+uhttp   desk/lib/urui-http.hoon
+ufiles  desk/lib/urui-files.hoon
+ast     desk/sur/obelisk-ast.hoon
+web     desk/sur/obelisk-web.hoon
+ujs     desk/lib/urui-js.hoon
+shell   desk/lib/urui-shell.hoon
+ucss    desk/lib/urui-css.hoon
+uace    desk/lib/urui-ace.hoon
+ucfg    desk/lib/urui-config.hoon
+obweb   desk/lib/obelisk-web.hoon

@@ -27,7 +27,14 @@
 # `sha256sum`.
 #
 # A manifest is one `face  path` pair per line, in binding order, ending
-# with the library that defines the asset arms.
+# with the library that defines the asset arms.  It may also carry one
+#
+#   @assets  page:our css javascript:our
+#
+# directive naming the arms to digest, which `--assets` overrides.  An
+# arm written `name:our` is a gate taking the ship and is called with
+# ~zod: a digest only has to be stable, and there is no ship here.  A
+# bare name is an arm whose product is already the cord.
 #
 # Requirements: a vere binary (VERE env or the default below), python3.
 #
@@ -37,7 +44,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERE="${VERE:-$HOME/piers/urbit}"
 CONSUMER="$PWD"
 SPEC=""
-ASSETS="page css javascript"
+ASSETS=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -60,6 +67,14 @@ fi
 [[ -x "$VERE" ]] || { echo "no vere binary at $VERE (set VERE)" >&2; exit 1; }
 [[ -f "$SPEC" ]] || { echo "no manifest at $SPEC" >&2; exit 1; }
 
+if [[ -z "$ASSETS" ]]; then
+  ASSETS="$(awk '$1 == "@assets" { $1 = ""; print; exit }' "$SPEC")"
+  ASSETS="${ASSETS:-page css javascript}"
+fi
+
+NAMES=""
+for asset in $ASSETS; do NAMES="$NAMES ${asset%:our}"; done
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -67,16 +82,22 @@ WEB=""
 {
   while read -r face relative; do
     [[ -z "${face:-}" || "${face:0:1}" == "#" ]] && continue
+    [[ "$face" == "@assets" ]] && continue
     echo "=+  ^=  $face"
     grep -v '^/[-+*]' "$CONSUMER/$relative"
     WEB="$face"
   done < "$SPEC"
   for asset in $ASSETS; do
-    echo "=/  $asset-cord=@t  $asset:$WEB"
+    name="${asset%:our}"
+    if [[ "$asset" == *:our ]]; then
+      echo "=/  $name-cord=@t  ($name:$WEB ~zod)"
+    else
+      echo "=/  $name-cord=@t  $name:$WEB"
+    fi
   done
   echo ':*'
-  for asset in $ASSETS; do
-    echo "  (met 3 $asset-cord)  (shax $asset-cord)"
+  for name in $NAMES; do
+    echo "  (met 3 $name-cord)  (shax $name-cord)"
   done
   echo '=='
 } > "$WORK/digest.hoon"
@@ -84,7 +105,7 @@ WEB=""
 "$VERE" eval < "$WORK/digest.hoon" 2>&1 \
   | grep -vE 'loom|lite|eval \(run\)|^$' > "$WORK/digest.out"
 
-python3 - "$WORK/digest.out" "$ASSETS" <<'PY'
+python3 - "$WORK/digest.out" "$NAMES" <<'PY'
 import re, sys
 
 raw = re.sub(r'\x1b\[[0-9;]*m', '', open(sys.argv[1]).read())
