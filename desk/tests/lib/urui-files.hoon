@@ -202,6 +202,8 @@
     (expect !>(strict.made))
     (expect !>(verify.made))
     (expect-eq !>(default-timeout:ufiles) !>(timeout.made))
+    ::  an app that does not ask for it keeps snapshots read-only
+    (expect !>(!edit-snapshots.made))
   ==
 ::
 ++  test-valid-segment
