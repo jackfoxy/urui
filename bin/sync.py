@@ -26,6 +26,15 @@ def manifest():
     paths += [p.relative_to(ROOT).as_posix()
               for p in sorted((ROOT / "desk/lib").glob("*.hoon"))
               if p.name != "test.hoon"]
+    # The suites for those libraries, which a consumer vendors too.  They
+    # were left out once, and a $shortcut field added in urui then broke
+    # every consumer's desk build while --strict still reported in sync.
+    #
+    # The glob is `urui-*` on purpose: a consumer that needs a test case
+    # of its own puts it in a consumer-named file beside these, which is
+    # never synced and never checked against urui.
+    paths += [p.relative_to(ROOT).as_posix()
+              for p in sorted((ROOT / "desk/tests/lib").glob("urui-*.hoon"))]
     # Assets and browser support activate when their extraction lands.
     if (ROOT / "desk/web/ace/ace.js").is_file():
         paths += ["desk/web/ace/" + name for name in ACE]

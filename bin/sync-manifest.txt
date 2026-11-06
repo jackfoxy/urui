@@ -6,6 +6,13 @@ desk/lib/urui-files.hoon
 desk/lib/urui-http.hoon
 desk/lib/urui-js.hoon
 desk/lib/urui-shell.hoon
+desk/tests/lib/urui-ace.hoon
+desk/tests/lib/urui-config.hoon
+desk/tests/lib/urui-css.hoon
+desk/tests/lib/urui-files.hoon
+desk/tests/lib/urui-http.hoon
+desk/tests/lib/urui-js.hoon
+desk/tests/lib/urui-shell.hoon
 desk/web/ace/ace.js
 desk/web/ace/theme-github.js
 desk/web/ace/theme-monokai.js
