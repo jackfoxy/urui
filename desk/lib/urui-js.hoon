@@ -4867,7 +4867,6 @@
   function documentsWire() {
     if (!filesConfig) return;
     const run = {
-      new: (name) => docCreate(name, {focus: true}),
       open: (name) => docOpen(name),
       save: (name) => docSave(name),
       'save-as': (name) => docSave(name, {as: true}),
