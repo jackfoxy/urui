@@ -67,6 +67,18 @@ for name in "${CONSUMERS[@]}"; do
       echo "BUILD    $name (asset-digest.sh --spec $(basename "$spec"))" >&2
       status=1
     fi
+    #  And the synced suites, in the consumer's own subject: `/+ *test`
+    #  exposes the consumer's lib/test.hoon and whatever its context
+    #  imports, which can shadow a lull name for a file urui wrote.
+    for suite in "$dest"/desk/tests/lib/urui-*.hoon; do
+      [[ -f "$suite" ]] || continue
+      relative="desk/tests/lib/$(basename "$suite")"
+      if ! node "$ROOT/bin/hoon-test.js" "$dest" "$relative" >/dev/null 2>&1
+      then
+        echo "SUITE    $name ($relative)" >&2
+        status=1
+      fi
+    done
   fi
 done
 
