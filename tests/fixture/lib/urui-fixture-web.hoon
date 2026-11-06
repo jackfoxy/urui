@@ -129,14 +129,22 @@
   ==
 ::
 ++  shortcuts
-  ::  Five chords with the shapes graph-viz owns: run, a save for each
-  ::  store, and two view commands.
+  ::  One chord of every shape the contract allows, so the conflict
+  ::  gate has a case for each: a %free app chord, urui's two dialog
+  ::  chords as documented %override conflicts, a save for each store,
+  ::  a %gated copy, and two %preview view commands.
+  ::
+  ::  Ctrl-0 fits and Ctrl-1 resets, matching graph-viz.  The two were
+  ::  inverted here, and this fixture is what the gate reads.
   ^-  (list shortcut:urui)
-  :~  ['Ctrl-Enter' 'echo' %always]
-      ['Ctrl-S' 'save:text' %always]
-      ['Ctrl-Shift-S' 'save:note' %always]
-      ['Ctrl-0' 'reset-view' %preview]
-      ['Ctrl-1' 'fit-view' %preview]
+  :~  ['Ctrl-Enter' 'echo' %always %free `'Echo the source']
+      ['F1' 'help' %always %override `'Help']
+      ['F2' 'settings' %always %override `'Settings']
+      ['Ctrl-S' 'save:text' %always %free `'Save the text']
+      ['Ctrl-Shift-S' 'save:note' %always %free `'Save the note']
+      ['Alt-C' 'copy:text' %no-editor %gated `'Copy the text']
+      ['Ctrl-0' 'fit-view' %preview %free `'Fit the view']
+      ['Ctrl-1' 'reset-view' %preview %free `'Reset the view']
   ==
 ::
 ++  spec
@@ -173,8 +181,12 @@
 ++  toolbar
   ^-  marl
   :~  ;nav.toolbar(aria-label "Fixture controls")
-        ;button#help(type "button", aria-expanded "false"): Help
-        ;button#echo.primary(type "button"): Echo
+        ;+  settings-button:shell
+        ;+  help-button:shell
+        ::  `data-chord` is how a consumer's own control gets a badge
+        ;button#echo.primary(type "button", data-chord "echo")
+          ;span: Echo
+        ==
         ;label.toggle
           ;input#auto-echo(type "checkbox", checked "");
           ;span: Auto

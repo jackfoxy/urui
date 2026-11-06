@@ -8,14 +8,38 @@ module.exports = async (env) => {
   const {api} = fixture(env);
   const {shortcuts} = api.config;
 
-  assert.equal(shortcuts.length, 5);
+  assert.equal(shortcuts.length, 8);
   assert.deepEqual(
     shortcuts.map((shortcut) => shortcut.binding),
-    ['Ctrl-Enter', 'Ctrl-S', 'Ctrl-Shift-S', 'Ctrl-0', 'Ctrl-1']
+    [
+      'Ctrl-Enter', 'F1', 'F2', 'Ctrl-S', 'Ctrl-Shift-S', 'Alt-C',
+      'Ctrl-0', 'Ctrl-1'
+    ]
   );
   assert.deepEqual(
     shortcuts.map((shortcut) => shortcut.when),
-    ['always', 'always', 'always', 'preview', 'preview']
+    [
+      'always', 'always', 'always', 'always', 'always', 'no-editor',
+      'preview', 'preview'
+    ]
+  );
+  //  `policy` says what a chord costs against the pinned keymaps, and
+  //  `label` names it for the badge and the help table
+  assert.deepEqual(
+    shortcuts.map((shortcut) => shortcut.policy),
+    ['free', 'override', 'override', 'free', 'free', 'gated', 'free', 'free']
+  );
+  assert.deepEqual(
+    shortcuts.filter((shortcut) => shortcut.policy === 'override')
+      .map((shortcut) => shortcut.command),
+    ['help', 'settings']
+  );
+  assert.ok(shortcuts.every((shortcut) => shortcut.label));
+  //  Ctrl-0 fits and Ctrl-1 resets, as in graph-viz; they were inverted
+  assert.deepEqual(
+    shortcuts.filter((shortcut) => shortcut.when === 'preview')
+      .map((shortcut) => shortcut.command),
+    ['fit-view', 'reset-view']
   );
   assert.equal(api.shortcuts.register('Ctrl-K', 'command'), 'registered');
   assert.deepEqual(
