@@ -539,7 +539,7 @@
 ++  test-json-wire-contract
   ::  One POST and one envelope decode for every consumer route, with
   ::  the error carrying what the toast and the retry paths read.
-  ::  obelisk and heathcliff each had their own copy of this.
+  ::  Two consumers each had their own copy of this.
   =/  source  (trip runtime:ujs)
   =/  needles=(list tape)
     :~  "async function request(url, body, options = \{})"
