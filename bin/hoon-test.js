@@ -28,9 +28,13 @@ const source = fs.readFileSync(testFile, 'utf8');
 
 //  `/*` pulls a file out of clay.  There is no clay here, so a suite
 //  built on a corpus needs the desk runner and a booted ship.
-if (/^\/\*/m.test(source)) {
+//  `/*` pulls a file out of clay and `/=` builds another ford target,
+//  such as an agent.  Neither exists here, and `readSource` strips
+//  neither, so the assembled source would be a syntax error rather
+//  than an honest skip.
+if (/^\/[*=]/m.test(source)) {
   process.stderr.write(
-    `${path.relative(consumer, testFile)} imports clay files with /*; `
+    `${path.relative(consumer, testFile)} imports clay with /* or /=; `
     + 'run it with -test on a ship\n'
   );
   process.exit(2);

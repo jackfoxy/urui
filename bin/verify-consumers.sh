@@ -11,6 +11,9 @@
 # consumer that is present and has drifted fails the whole run, so the
 # vendored copies cannot silently diverge again.
 #
+# The build and suite checks compile each consumer, so a full run takes
+# minutes; `--no-build` leaves only the drift check for an inner loop.
+#
 # Purity is checked once, first: consumer vocabulary in desk/ is drift
 # of a different kind.
 #
@@ -67,17 +70,38 @@ for name in "${CONSUMERS[@]}"; do
       echo "BUILD    $name (asset-digest.sh --spec $(basename "$spec"))" >&2
       status=1
     fi
-    #  And the synced suites, in the consumer's own subject: `/+ *test`
+    #  Every suite the consumer's desk carries, not only the synced
+    #  ones.  The synced ones need running here because `/+ *test`
     #  exposes the consumer's lib/test.hoon and whatever its context
     #  imports, which can shadow a lull name for a file urui wrote.
-    for suite in "$dest"/desk/tests/lib/urui-*.hoon; do
+    #  The consumer's own need running because a change in urui can
+    #  break what they assert -- a relocated control did, and went
+    #  unnoticed for two phases while only `urui-*` was checked.
+    #
+    #  hoon-test.js refuses a suite that needs a ship (`/*` or `/=`);
+    #  that is a skip, not a failure.
+    #  Scoped to the suites a urui change can break: the synced ones,
+    #  and the consumer's own web suite, which asserts the shared
+    #  markup.  Its domain suites -- layout, parsing, ranking -- do not
+    #  depend on urui and cost minutes; they belong to its own command.
+    for suite in "$dest"/desk/tests/lib/urui-*.hoon \
+                 "$dest"/desk/tests/lib/*-web.hoon; do
       [[ -f "$suite" ]] || continue
       relative="desk/tests/lib/$(basename "$suite")"
-      if ! node "$ROOT/bin/hoon-test.js" "$dest" "$relative" >/dev/null 2>&1
+      #  `if` so a non-zero exit is data, not an abort under `set -e`
+      if output="$(node "$ROOT/bin/hoon-test.js" "$dest" "$relative" 2>&1)"
       then
-        echo "SUITE    $name ($relative)" >&2
-        status=1
+        code=0
+      else
+        code=$?
       fi
+      case "$code" in
+        0)  ;;
+        2)  ;;  # needs a ship
+        *)  echo "SUITE    $name ($relative)" >&2
+            printf '%s\n' "$output" | tail -3 >&2
+            status=1 ;;
+      esac
     done
   fi
 done
