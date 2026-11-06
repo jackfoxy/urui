@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "test:purity": "bin/check-purity.sh",
+    "test:sync": "bin/verify-consumers.sh",
     "test:browser": "tests/browser/run.sh",
     "test:browser:real": "playwright test --config tests/browser/real/playwright.config.js",
     "test:shortcuts": "node --test tests/browser/ace-shortcuts.test.js",
