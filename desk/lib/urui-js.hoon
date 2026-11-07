@@ -1329,13 +1329,23 @@
   //  write all three by hand, which is how a rebind could leave a
   //  stale badge behind.
   function applyKeyBadges() {
+    //  By control, not by chord: a command may have more than one
+    //  binding -- an alias for an engine that keeps the first -- and
+    //  appending each in turn produced `Reset view (Ctrl-1)
+    //  (Ctrl-Shift-0)` and an aria-keyshortcuts holding only the last.
+    const byControl = new Map();
     for (const chord of config.shortcuts || []) {
       const control = chordControl(chord.command);
       if (!control) continue;
-      control.setAttribute('aria-keyshortcuts', chord.binding);
+      if (!byControl.has(control)) byControl.set(control, []);
+      byControl.get(control).push(chord.binding);
+    }
+    for (const [control, bindings] of byControl) {
+      //  space-separated is what aria-keyshortcuts means by several
+      control.setAttribute('aria-keyshortcuts', bindings.join(' '));
       //  an explicit `tips` entry is the consumer's last word
       if (!Object.hasOwn(tips, control.id) && control.title) {
-        control.title = `${control.title} (${chord.binding})`;
+        control.title = `${control.title} (${bindings.join(' or ')})`;
       }
       //  The visible badge is for the header toolbar only.  A pane's
       //  file and preview controls sit in tight rows, several to a
@@ -1346,8 +1356,10 @@
       if (!control.closest?.('.app-header')) continue;
       if (control.querySelector?.('kbd')) continue;
       if (!control.querySelector?.('span')) continue;
+      //  the first binding only: the badge is a reminder, and a
+      //  toolbar button has room for one key, not a list
       const badge = document.createElement('kbd');
-      badge.textContent = chord.binding;
+      badge.textContent = bindings[0];
       control.append(badge);
     }
   }

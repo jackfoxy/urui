@@ -594,8 +594,14 @@
         "\{help: 'help', settings: 'settings'}"
         "`$\{store}-$\{action}`"
         "[data-chord="
-        "setAttribute('aria-keyshortcuts', chord.binding)"
+        "setAttribute('aria-keyshortcuts', bindings.join(' '))"
         "Object.hasOwn(tips, control.id)"
+        ::  one control may carry several bindings; the badge shows the
+        ::  first and the tooltip lists them
+        "bindings.join(' or ')"
+        "badge.textContent = bindings[0]"
+        ::  the visible badge is the header toolbar's alone
+        "control.closest?.('.app-header')"
         "applyKeyBadges();"
     ==
   %-  zing
