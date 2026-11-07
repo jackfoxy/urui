@@ -1,6 +1,7 @@
 'use strict';
 
-// Settings and Help move by their header.
+// Every dialog moves: Settings, Help, the file dialog that Open and
+// Save As share, and the confirmation.
 //
 // A dialog covers whatever is behind it, and the thing a user wants to
 // compare it against is often exactly there. Dragging is the escape.
@@ -138,4 +139,78 @@ test('a moved dialog still traps Tab and still scrolls', async ({page}) => {
     await page.keyboard.press('Tab');
     expect(await inside(), `focus left after ${press + 1} tabs`).toBe(true);
   }
+});
+
+test('Open moves by its header', async ({page}) => {
+  await installBackend(page, {
+    browse: () => [['note-one', 'md'], ['note-two', 'md']]
+  });
+  await page.goto('/apps/urui-fixture/');
+  await expect(page.locator('#editor-pane-document-tabs .document-tab'))
+    .not.toHaveCount(0);
+  await page.locator('#text-open').click();
+  const card = page.locator('#urui-file-dialog .help-card');
+  await expect(card).toBeVisible();
+  await expect(card).toHaveClass(/is-draggable/);
+  const before = await box(card);
+  await dragHeader(page, card, 110, 60);
+  const after = await box(card);
+  expect(Math.round(after.x - before.x)).toBeGreaterThan(90);
+  //  the file list is still usable after the move
+  await expect(page.locator('#urui-file-dialog-list')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#urui-file-dialog')).toBeHidden();
+});
+
+test('the confirmation moves by its card, having no header',
+  async ({page}) => {
+    await open(page, 'settings');
+    await page.keyboard.press('Escape');
+    //  a dirty tab, closed: urui asks before discarding
+    await page.evaluate(() => {
+      const editor = window.__URUI_EDITOR_TEST__;
+      editor.replaceRange(0, 0, 'dirty\n');
+    });
+    await page.locator('#editor-pane-document-tabs .document-tab-control')
+      .first().locator('.document-tab-close').click();
+    const card = page.locator('#urui-confirm .help-card');
+    await expect(card).toBeVisible();
+    //  no header, so the card itself is the handle
+    await expect(card).toHaveClass(/is-draggable-body/);
+    await expect(card).toHaveCSS('cursor', 'move');
+    await expect(card.locator('.pane-header')).toHaveCount(0);
+
+    const before = await box(card);
+    //  dragged by the message, which is not a control
+    const message = page.locator('#urui-confirm-message');
+    const from = await message.boundingBox();
+    await page.mouse.move(from.x + 10, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 70, from.y + from.height / 2 + 40);
+    await page.mouse.move(from.x + 130, from.y + from.height / 2 + 80);
+    await page.mouse.up();
+    const after = await box(card);
+    expect(Math.round(after.x - before.x)).toBeGreaterThan(90);
+
+    //  and both answers are still clickable after the move
+    await page.locator('#urui-confirm-cancel').click();
+    await expect(page.locator('#urui-confirm')).toBeHidden();
+  });
+
+test('a dialog reopens centred, whichever it is', async ({page}) => {
+  await installBackend(page, {browse: () => [['one', 'md']]});
+  await page.goto('/apps/urui-fixture/');
+  await expect(page.locator('#editor-pane-document-tabs .document-tab'))
+    .not.toHaveCount(0);
+  await page.locator('#text-open').click();
+  const card = page.locator('#urui-file-dialog .help-card');
+  const before = await box(card);
+  await dragHeader(page, card, 120, 70);
+  expect((await box(card)).x).not.toBe(before.x);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#urui-file-dialog')).toBeHidden();
+  await page.locator('#text-open').click();
+  const after = await box(card);
+  expect(Math.round(after.x)).toBe(Math.round(before.x));
+  expect(Math.round(after.y)).toBe(Math.round(before.y));
 });
