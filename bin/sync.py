@@ -41,6 +41,16 @@ def manifest():
     if (ROOT / "tests/browser/doubles/index.js").is_file():
         paths += [p.relative_to(ROOT).as_posix() for p in sorted(
             (ROOT / "tests/browser/doubles").rglob("*")) if p.is_file()]
+    # Documentation with one source: the Ace reference is generated
+    # from the manifest the gate reads, and the policy and dialog
+    # contracts are the same in every app.  An app's own
+    # keyboard-shortcuts.md is not synced -- its prose is its own, and
+    # only the chord table inside it is generated.
+    for shared in ("desk/doc/ace-keys.md",
+                   "desk/doc/key-policy.md",
+                   "desk/doc/modal-keys.md"):
+        if (ROOT / shared).is_file():
+            paths.append(shared)
     # The conflict gate and the two keymap manifests it reads.  Not the
     # exceptions file: each app justifies its own collisions.
     for shared in ("tests/browser/ace-win-linux-shortcuts.json",

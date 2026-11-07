@@ -36,6 +36,9 @@ fi
 #  The Vim manifest is generated from the vendored bundle; a stale one
 #  would let the conflict gate clear a chord Vim actually takes.
 node "$ROOT/bin/vim-chords.js" --check
+#  The Ace reference is generated from that same manifest; a stale one
+#  would document bindings the gate no longer believes in.
+node "$ROOT/bin/keyboard-docs.js" --check
 
 status=0
 checked=0
@@ -78,6 +81,13 @@ for name in "${CONSUMERS[@]}"; do
     if ! (cd "$dest" && node --test \
         tests/browser/shortcut-conflicts.test.js >/dev/null 2>&1); then
       echo "CHORDS   $name (tests/browser/shortcut-conflicts.test.js)" >&2
+      status=1
+    fi
+    #  And the chord table in its documentation, generated from the
+    #  same arm the gate reads.
+    if ! node "$ROOT/bin/keyboard-docs.js" --check --consumer "$dest" \
+        >/dev/null 2>&1; then
+      echo "DOCS     $name (desk/doc/keyboard-shortcuts.md)" >&2
       status=1
     fi
     #  Every suite the consumer's desk carries, not only the synced

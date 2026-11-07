@@ -30,6 +30,9 @@ tests/browser/doubles/fetch.js
 tests/browser/doubles/index.js
 tests/browser/doubles/media.js
 tests/browser/doubles/storage.js
+desk/doc/ace-keys.md
+desk/doc/key-policy.md
+desk/doc/modal-keys.md
 tests/browser/ace-win-linux-shortcuts.json
 tests/browser/vim-chords.json
 tests/browser/chords.js
