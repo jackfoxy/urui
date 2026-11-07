@@ -1336,10 +1336,14 @@
     }
   }
 
-  //  The draggable card of a dialog element: its `.help-card`, or the
-  //  element itself if a consumer styled its own.
+  //  The draggable card inside a dialog element.
+  //
+  //  Its `.help-card` and nothing else: the element itself is the
+  //  backdrop, which covers the viewport, and transforming that would
+  //  drag the dimming with it.  A consumer whose dialog has no card
+  //  simply does not move, which is the safe way to be wrong.
   function dialogCard(element) {
-    return element?.querySelector?.('.help-card') || element;
+    return element?.querySelector?.('.help-card') || null;
   }
 
   //  `runtime.dialogs.modal(element, {close, fallback})` puts an
