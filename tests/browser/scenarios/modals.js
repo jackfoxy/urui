@@ -47,7 +47,9 @@ module.exports = async (env) => {
   el('settings').focus();
   runtime.dialogs.setSettingsOpen(true);
   assert.equal(el('settings-modal').hidden, false);
-  assert.equal(active(), el('close-settings'));
+  //  the card, not the close button: it is the scroll container, so
+  //  PageUp, PageDown, Home and End page the settings
+  assert.equal(active(), el('settings-card'));
   assert.equal(el('workbench').inert, true);
   assert.equal(el('help-panel').inert, true);
   assert.notEqual(el('settings-modal').inert, true);
@@ -56,6 +58,21 @@ module.exports = async (env) => {
     'a bound chord is swallowed');
   assert.equal(runs, 1, 'and not run');
   assert.equal(key('a').prevented, undefined, 'other keys reach the modal');
+
+  // ---- the owning chord closes it; others stay swallowed ---------------
+  //
+  //  A modal must never be a way to reach the application behind it, so
+  //  every bound chord is swallowed -- except the one that opened this
+  //  dialog, which closes it.  Without that, F2 opened Settings and
+  //  then did nothing, and Escape was the only way out.
+  bindings.push({binding: 'F2', command: 'settings', when: 'always'});
+  assert.equal(key('F2').prevented, true, 'the owning chord is claimed');
+  assert.equal(el('settings-modal').hidden, true, 'and closes the dialog');
+  assert.equal(active(), el('settings'), 'and restores the opener');
+  assert.equal(key('F2').prevented, true, 'and opens it again');
+  assert.equal(el('settings-modal').hidden, false);
+  assert.equal(active(), el('settings-card'));
+  bindings.pop();
 
   // ---- Tab and Shift+Tab stay inside ------------------------------------
   el('workbench').focus();

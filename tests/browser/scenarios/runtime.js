@@ -81,7 +81,10 @@ module.exports = async (env) => {
   runtime.dialogs.setHelpOpen(true);
   assert.equal(runtime.dialogs.helpIsOpen(), true);
   assert.equal(env.elements['#help']['aria-expanded'], 'true');
-  assert.equal(env.document.activeElement, env.elements['#close-help']);
+  //  the card, not the close button: it is the scroll container, so
+  //  PageUp, PageDown, Home and End page the help content
+  assert.equal(env.document.activeElement,
+    env.elements['#editor-help-card']);
   runtime.dialogs.setHelpOpen(false, true);
   assert.equal(env.elements['#help-panel'].hidden, true);
   assert.equal(env.document.activeElement, env.elements['#help']);
