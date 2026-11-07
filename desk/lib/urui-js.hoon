@@ -1337,6 +1337,13 @@
       if (!Object.hasOwn(tips, control.id) && control.title) {
         control.title = `${control.title} (${chord.binding})`;
       }
+      //  The visible badge is for the header toolbar only.  A pane's
+      //  file and preview controls sit in tight rows, several to a
+      //  line, and a <kbd> after the label widens them unevenly --
+      //  which is a worse trade than leaving the binding to the
+      //  tooltip and aria-keyshortcuts set above, as both are on every
+      //  control either way.
+      if (!control.closest?.('.app-header')) continue;
       if (control.querySelector?.('kbd')) continue;
       if (!control.querySelector?.('span')) continue;
       const badge = document.createElement('kbd');
