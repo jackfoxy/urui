@@ -595,7 +595,8 @@
         "`$\{store}-$\{action}`"
         "[data-chord="
         "setAttribute('aria-keyshortcuts', bindings.join(' '))"
-        "Object.hasOwn(tips, control.id)"
+        ::  a tip sets the wording; urui still supplies the key
+        "!control.title.includes(bindings[0])"
         ::  one control may carry several bindings; the badge shows the
         ::  first and the tooltip lists them
         "bindings.join(' or ')"

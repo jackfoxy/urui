@@ -1343,8 +1343,12 @@
     for (const [control, bindings] of byControl) {
       //  space-separated is what aria-keyshortcuts means by several
       control.setAttribute('aria-keyshortcuts', bindings.join(' '));
-      //  an explicit `tips` entry is the consumer's last word
-      if (!Object.hasOwn(tips, control.id) && control.title) {
+      //  A `tips` entry sets the wording and urui still supplies the
+      //  key: the consumer names the action, the chord table names the
+      //  binding, and neither has to repeat the other.  Suppressing the
+      //  suffix for a tipped control only invited the binding to be
+      //  written out by hand, which is what goes stale.
+      if (control.title && !control.title.includes(bindings[0])) {
         control.title = `${control.title} (${bindings.join(' or ')})`;
       }
       //  The visible badge is for the header toolbar only.  A pane's
