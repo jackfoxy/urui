@@ -35,7 +35,9 @@ test('Settings opens a modal holding theme, keybindings, and format',
     await toggle.click();
     await expect(modal).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('#close-settings')).toBeFocused();
+    //  the card, not the close button: it is the scroll container,
+    //  so PageUp and PageDown page the settings
+    await expect(page.locator('#settings-card')).toBeFocused();
     for (const id of ['#theme', '#keys-ace', '#keys-vim',
       '#layout-columns', '#layout-rows']) {
       await expect(page.locator(id)).toBeVisible();
@@ -93,9 +95,9 @@ test('screen format switches pane orientation and persists a reload',
     await page.locator('#settings').click();
     await page.locator('#layout-rows').click();
     await expect(page.locator('#layout-rows'))
-      .toHaveAttribute('aria-pressed', 'true');
+      .toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('#layout-columns'))
-      .toHaveAttribute('aria-pressed', 'false');
+      .toHaveAttribute('aria-checked', 'false');
     await expect(workspace).toHaveAttribute('data-layout', 'rows');
     await expect(splitter).toHaveAttribute('aria-orientation', 'horizontal');
 
@@ -118,7 +120,7 @@ test('screen format switches pane orientation and persists a reload',
     await expect(splitter).toHaveAttribute('aria-orientation', 'horizontal');
     await page.locator('#settings').click();
     await expect(page.locator('#layout-rows'))
-      .toHaveAttribute('aria-pressed', 'true');
+      .toHaveAttribute('aria-checked', 'true');
   });
 
 test('each format keeps its own divider position', async ({page}) => {

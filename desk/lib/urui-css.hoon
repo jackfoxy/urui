@@ -948,9 +948,9 @@
 
   .help-panel[hidden] { display: none; }
 
-  ::  The card is the scroll container, so PageUp, PageDown, Home and
-  ::  End have something to scroll once it has focus.  Without a height
-  ::  bound a long panel simply overflowed the viewport.
+  /* The card is the scroll container, so PageUp, PageDown, Home and
+     End have something to scroll once it has focus.  Without a height
+     bound a long panel simply overflowed the viewport. */
   .help-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -963,8 +963,8 @@
     width: 100%;
   }
 
-  ::  Focused only programmatically, to put the keyboard on the
-  ::  scroll container; it is not a control and shows no ring.
+  /* Focused only programmatically, to put the keyboard on the scroll
+     container; it is not a control and shows no ring. */
   .help-card:focus { outline: none; }
 
   .help-close {

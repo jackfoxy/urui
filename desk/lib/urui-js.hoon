@@ -1131,8 +1131,12 @@
       for (const child of Array.from(node?.children || [])) {
         if (child.hidden) continue;
         const name = String(child.localName || '').toLowerCase();
+        //  `tabindex=-1` is reachable only by script, so it cannot be
+        //  the wrap point: a roving radiogroup keeps all but one of
+        //  its radios out of the tab order, and counting those let
+        //  focus walk straight out of the dialog.
         if (['button', 'input', 'select', 'textarea'].includes(name)
-          && !child.disabled) {
+          && !child.disabled && (child.tabIndex ?? 0) >= 0) {
           found.push(child);
         }
         walk(child);
@@ -1201,7 +1205,14 @@
     element.hidden = true;
     syncModalInert();
     if (wasOpen && restoreFocus) {
-      (modal.returnFocus ?? modal.fallback?.())?.focus?.();
+      //  A dialog opened by its chord had no opener focused, so what
+      //  held focus was the body.  Focusing that strands the keyboard
+      //  at the top of the document; the fallback is the control the
+      //  dialog belongs to, which is where the user would look.
+      const held = modal.returnFocus;
+      const opener = held && held !== document.body
+        ? held : modal.fallback?.();
+      opener?.focus?.();
     }
     modal.returnFocus = null;
   }

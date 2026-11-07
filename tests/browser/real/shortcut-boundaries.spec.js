@@ -134,6 +134,11 @@ test('focus boundaries cover explorer, Help, docs, and the file tree', async ({
   await expect(page.locator('#note-files-tab')).toBeFocused();
 
   await page.locator('#help').click();
+  //  the card, not the close button: it is the scroll container, so
+  //  PageUp and PageDown page the help content.  The close button is
+  //  the first control a Tab reaches from there.
+  await expect(page.locator('#editor-help-card')).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.locator('#close-help')).toBeFocused();
   await expect(page.locator('#help-panel')).toHaveAttribute('role', 'dialog');
   await expect(page.locator('#help-tab')).toHaveCount(0);
