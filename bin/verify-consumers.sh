@@ -29,7 +29,7 @@ for argument in "$@"; do
   esac
 done
 if [[ ${#CONSUMERS[@]} -eq 0 ]]; then
-  CONSUMERS=(obelisk graph-viz heathcliff)
+  CONSUMERS=(obelisk graph-viz heathcliff quiz)
 fi
 
 "$ROOT/bin/check-purity.sh"
@@ -61,6 +61,18 @@ for name in "${CONSUMERS[@]}"; do
   #
   #  Needs a per-consumer manifest; skipped where there is none, and by
   #  --no-build.
+  #  The conflict gate is cheap and needs no manifest: it reads the
+  #  consumer's own chord table and its own exceptions file.  One
+  #  consumer's web library pulls its client javascript in with `/*`,
+  #  which `vere eval` cannot build, so it has no digest manifest --
+  #  and the gate still applies to it.
+  if [[ -f "$dest/tests/browser/shortcut-conflicts.test.js" ]]; then
+    if ! (cd "$dest" && node --test \
+        tests/browser/shortcut-conflicts.test.js >/dev/null 2>&1); then
+      echo "CHORDS   $name (tests/browser/shortcut-conflicts.test.js)" >&2
+      status=1
+    fi
+  fi
   spec="$ROOT/bin/assets-$name.txt"
   if [[ "$BUILD" == "yes" && -f "$spec" ]]; then
     if "$ROOT/bin/asset-digest.sh" --consumer "$dest" --spec "$spec" \
@@ -98,6 +110,24 @@ for name in "${CONSUMERS[@]}"; do
       case "$code" in
         0)  ;;
         2)  ;;  # needs a ship
+        *)  echo "SUITE    $name ($relative)" >&2
+            printf '%s\n' "$output" | tail -3 >&2
+            status=1 ;;
+      esac
+    done
+  fi
+  if [[ "$BUILD" == "yes" && ! -f "$spec" ]]; then
+    for suite in "$dest"/desk/tests/lib/urui-*.hoon; do
+      [[ -f "$suite" ]] || continue
+      relative="desk/tests/lib/$(basename "$suite")"
+      if output="$(node "$ROOT/bin/hoon-test.js" "$dest" "$relative" 2>&1)"
+      then
+        code=0
+      else
+        code=$?
+      fi
+      case "$code" in
+        0|2)  ;;
         *)  echo "SUITE    $name ($relative)" >&2
             printf '%s\n' "$output" | tail -3 >&2
             status=1 ;;
