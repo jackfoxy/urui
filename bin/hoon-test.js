@@ -28,9 +28,13 @@ const source = fs.readFileSync(testFile, 'utf8');
 
 //  `/*` pulls a file out of clay.  There is no clay here, so a suite
 //  built on a corpus needs the desk runner and a booted ship.
-if (/^\/\*/m.test(source)) {
+//  `/*` pulls a file out of clay and `/=` builds another ford target,
+//  such as an agent.  Neither exists here, and `readSource` strips
+//  neither, so the assembled source would be a syntax error rather
+//  than an honest skip.
+if (/^\/[*=]/m.test(source)) {
   process.stderr.write(
-    `${path.relative(consumer, testFile)} imports clay files with /*; `
+    `${path.relative(consumer, testFile)} imports clay with /* or /=; `
     + 'run it with -test on a ship\n'
   );
   process.exit(2);
@@ -51,18 +55,52 @@ function resolve(kind, token) {
   throw new Error(`cannot resolve ${kind} ${name}`);
 }
 
-function imports(file) {
+function tokens(file) {
   const text = fs.readFileSync(file, 'utf8');
   const found = [];
   for (const line of text.split('\n')) {
     const match = /^(\/[-+])\s+(.*)$/.exec(line.trim());
     if (!match) continue;
     for (const token of match[2].split(',').map((item) => item.trim())) {
-      if (!token || token.startsWith('*')) continue;
-      found.push(resolve(match[1], token));
+      if (!token) continue;
+      found.push([match[1], token]);
     }
   }
   return found;
+}
+
+function imports(file) {
+  return tokens(file)
+    .filter(([, token]) => !token.startsWith('*'))
+    .map(([kind, token]) => resolve(kind, token));
+}
+
+//  A `/+ *lib` or `/- *sur` exposes that file's arms *and* its context,
+//  so a name it imported can shadow a name from lull.  Skipping these
+//  made the harness greener than a ship: a consumer whose lib/test.hoon
+//  wildcard-imports its own /sur could shadow $case for every synced
+//  suite, and nothing here would notice.
+function wildcards(file) {
+  return tokens(file)
+    .filter(([, token]) => token.startsWith('*'))
+    .map(([kind, token]) => resolve(kind, token.slice(1))[1]);
+}
+
+//  Deepest first, the order the `=>` chain needs.
+function wildcardChain(file) {
+  const chain = [];
+  const walk = (current) => {
+    for (const relative of wildcards(current)) {
+      const resolved = fs.existsSync(path.join(consumer, relative))
+        ? path.join(consumer, relative)
+        : path.join(uruiRoot, relative);
+      walk(resolved);
+      collect(resolved);
+      if (!chain.includes(relative)) chain.push(relative);
+    }
+  };
+  walk(file);
+  return chain;
 }
 
 //  Depth first, so every library is bound before the file importing it —
@@ -80,6 +118,7 @@ function collect(file) {
     bindings.push([face, relative]);
   }
 }
+const chain = wildcardChain(testFile);
 collect(testFile);
 bindings.push(['tst', path.relative(consumer, testFile)]);
 
@@ -89,8 +128,16 @@ const arms = only.length ? only : Array.from(
 if (!arms.length) throw new Error('no test arms found');
 
 const expression = `:*  ${arms.map((arm) => `(lent ${arm}:tst)`).join('  ')}  ==`;
-const program = `=>  ${readSource(path.join(uruiRoot, 'desk/lib/test.hoon'))}\n`
-  + assemble(bindings, expression, consumer);
+//  Each wildcard splat resolves consumer-first, so a consumer's own
+//  lib/test.hoon -- and whatever its context pulls in -- is what the
+//  suite compiles against, as on a ship.
+const splats = chain.map((relative) => {
+  const resolved = fs.existsSync(path.join(consumer, relative))
+    ? path.join(consumer, relative)
+    : path.join(uruiRoot, relative);
+  return `=>  ${readSource(resolved)}\n`;
+}).join('');
+const program = splats + assemble(bindings, expression, consumer);
 
 evaluate(program).then((output) => {
   const plain = output.replace(/\x1b\[[0-9;]*m/g, '');

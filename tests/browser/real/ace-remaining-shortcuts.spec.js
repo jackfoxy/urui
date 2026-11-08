@@ -452,8 +452,54 @@ async function exerciseCustom(page, state, row, binding) {
   }
 }
 
+//  Bindings the fixture declares as `%override` chords: the app takes
+//  them from Ace on purpose, so Ace's own outcome is no longer the
+//  expected one.  Each names how the shadowed Ace command stays
+//  reachable, which is what makes the override defensible.
+const displaced = new Map([
+  ['F1', {
+    command: 'help',
+    opens: '#help-panel',
+    aceCommand: 'openCommandPalette',
+    alternative: 'Ctrl-, opens Ace’s own settings menu'
+  }],
+  ['F2', {
+    command: 'settings',
+    opens: '#settings-modal',
+    aceCommand: 'toggleFoldWidget',
+    alternative: 'Alt-F2 toggles the parent fold widget'
+  }]
+]);
+
+//  An overridden chord must open the app's dialog, and the Ace command
+//  it displaced must still run when invoked by name.
+async function exerciseDisplaced(page, binding) {
+  const entry = displaced.get(binding);
+  const declared = await page.evaluate((command) => {
+    return (window.urui.config.shortcuts || []).find((chord) => {
+      return chord.command === command;
+    });
+  }, entry.command);
+  assert.ok(declared, `${binding} is declared by the fixture`);
+  assert.equal(declared.binding, binding);
+  assert.equal(declared.policy, 'override');
+
+  await page.keyboard.press(binding);
+  await expect(page.locator(entry.opens)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator(entry.opens)).toBeHidden();
+
+  const reachable = await page.evaluate((command) => {
+    const editor = window.ace.edit(document.querySelector('#editor'));
+    return Boolean(editor.commands.commands[command]);
+  }, entry.aceCommand);
+  assert.ok(reachable, `${entry.aceCommand} survives the override`);
+}
+
 async function exerciseBinding(page, state, row, binding) {
-  if (customActions.has(row.action)) {
+  if (displaced.has(binding)) {
+    await exerciseDisplaced(page, binding);
+  } else if (customActions.has(row.action)) {
     await exerciseCustom(page, state, row, binding);
   } else {
     await compareWithCommand(page, row, binding);

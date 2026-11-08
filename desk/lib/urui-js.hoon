@@ -1216,6 +1216,53 @@
     return control;
   }
 
+  // ---- the json wire ------------------------------------------------
+  //
+  // One POST, one envelope.  urui-files answers
+  // `{ok: false, error: {code, message, retryable, details}}`, and a
+  // consumer's own routes answer the same shape, so the decode and the
+  // error it raises belong here rather than in each app.
+  //
+  // A failure throws an Error carrying `status`, `code`, `retryable`
+  // and `details`, which is what the toast and the retry paths read.
+  // An app whose route reports failure differently passes `failed`.
+  function requestError(body, status) {
+    const error = body?.error || {};
+    const details = Array.isArray(error.details) ? error.details : [];
+    const message = error.message
+      ? (details.length ? `${error.message}\n${details.join('\n')}`
+        : error.message)
+      : `Request failed (${status}).`;
+    const raised = new Error(message);
+    raised.status = status;
+    raised.code = error.code ?? null;
+    raised.retryable = Boolean(error.retryable);
+    raised.details = details;
+    return raised;
+  }
+
+  async function request(url, body, options = {}) {
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    let parsed = null;
+    try {
+      parsed = await response.json();
+    } catch (_) {
+      throw new Error(`Server returned invalid JSON (${response.status}).`);
+    }
+    const failed = options.failed
+      ? options.failed(parsed)
+      : parsed?.ok === false;
+    if (!response.ok || failed) {
+      throw requestError(parsed, response.status);
+    }
+    return parsed;
+  }
+
   // ---- tooltips -----------------------------------------------------
   //
   // Every button carries a tooltip.  urui's own come through
@@ -1234,6 +1281,49 @@
     for (const [key, text] of Object.entries(tips)) {
       const node = document.getElementById?.(key);
       if (node) node.title = String(text);
+    }
+  }
+
+  //  The control a chord acts on, by convention rather than by
+  //  configuration: urui's own two dialogs, a store action at
+  //  `{store}-{action}`, and anything a consumer marks with
+  //  `data-chord="<command>"` for a control only it knows about.
+  function chordControl(command) {
+    const known = {help: 'help', settings: 'settings'};
+    if (Object.hasOwn(known, command)) {
+      return document.getElementById?.(known[command]) || null;
+    }
+    const [action, store] = String(command).split(':');
+    if (store) {
+      return document.getElementById?.(`${store}-${action}`) || null;
+    }
+    //  `globalThis.CSS` rather than `CSS`: an undeclared identifier
+    //  throws even behind optional chaining, and the offline doubles
+    //  declare no CSS object.
+    const escape = globalThis.CSS?.escape;
+    const selector = escape ? escape(command) : command;
+    return document.querySelector?.(`[data-chord="${selector}"]`) || null;
+  }
+
+  //  A declared chord puts its binding on its control: in
+  //  `aria-keyshortcuts`, in the tooltip, and as a <kbd> badge where
+  //  the control has a text label to sit beside.  Consumers used to
+  //  write all three by hand, which is how a rebind could leave a
+  //  stale badge behind.
+  function applyKeyBadges() {
+    for (const chord of config.shortcuts || []) {
+      const control = chordControl(chord.command);
+      if (!control) continue;
+      control.setAttribute('aria-keyshortcuts', chord.binding);
+      //  an explicit `tips` entry is the consumer's last word
+      if (!Object.hasOwn(tips, control.id) && control.title) {
+        control.title = `${control.title} (${chord.binding})`;
+      }
+      if (control.querySelector?.('kbd')) continue;
+      if (!control.querySelector?.('span')) continue;
+      const badge = document.createElement('kbd');
+      badge.textContent = chord.binding;
+      control.append(badge);
     }
   }
 
@@ -1388,6 +1478,7 @@
   //
   //   create(payload)     `{label, data}` for a new reference, or nothing
   //   render(panel, ref)  fill the reference panel from `ref.data`
+  //   dispose(ref)        release resources when a reference closes
   //   validate(data)      repaired data from a saved record, or undefined
   //   persist             false keeps the kind out of the session record
   let draggedTab;
@@ -1847,6 +1938,8 @@
   }
 
   function closeRefTab(id) {
+    const tab = refTabById(id);
+    if (tab) refHooks(tab.kind)?.dispose?.(tab);
     if (closeExplorerTab(id, 'ref')) changed();
   }
 
@@ -2656,6 +2749,7 @@
   function wire() {
     document.addEventListener('keydown', dispatchShortcut, {capture: true});
     applyTips();
+    applyKeyBadges();
     wireFullscreen();
     elements.contextOpen?.addEventListener('click', () => {
       const {kind, path} = contextTarget;
@@ -2730,6 +2824,22 @@
     elements.settingsToggle?.addEventListener('click', () => {
       setSettingsOpen(true);
     });
+    //  urui draws both dialogs, so it registers both commands: an app
+    //  gets F1 and F2 by declaring two chords and no javascript.  A
+    //  consumer that registers either name itself still wins, because
+    //  its boot runs after this.
+    //
+    //  These toggle, but only the opening half is reachable today:
+    //  +dispatchShortcut swallows a bound chord while a modal is open
+    //  rather than running it, so pressing F2 again does nothing.
+    //  Escape closes.  Making the chord that opened a dialog close it
+    //  is a change to the dispatcher, not to these handlers.
+    registerShortcut('settings', () => {
+      setSettingsOpen(!settingsIsOpen(), settingsIsOpen());
+    });
+    registerShortcut('help', () => {
+      setHelpOpen(!helpIsOpen(), helpIsOpen());
+    });
     elements.closeSettings?.addEventListener('click', () => {
       setSettingsOpen(false, true);
     });
@@ -2775,11 +2885,21 @@
     const droppableRef = () => {
       return Boolean(draggedTab?.ref) && Boolean(refHooks(draggedTab.ref.kind));
     };
+    // Iframes otherwise consume native drag events before the pane sees them.
+    const clearRefDrag = () => {
+      elements.explorerPane?.classList.remove('is-ref-drop-target');
+    };
+    document.addEventListener('dragstart', () => {
+      elements.explorerPane?.classList.toggle('is-ref-drop-target',
+        droppableRef());
+    });
+    document.addEventListener('dragend', clearRefDrag);
+    document.addEventListener('drop', clearRefDrag, true);
     elements.explorerPane?.addEventListener('dragover', (event) => {
       if (!droppableRef()) return;
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
-    });
+    }, true);
     elements.explorerPane?.addEventListener('drop', (event) => {
       if (!droppableRef()) return;
       event.preventDefault();
@@ -2787,7 +2907,7 @@
       const payload = draggedTab.ref;
       draggedTab = undefined;
       openAppRef(payload);
-    });
+    }, true);
     window.addEventListener('beforeunload', saveSession);
     window.addEventListener('resize', () => {
       for (const menu of menus) menu.close();
@@ -2807,6 +2927,7 @@
     elements,
     clamp,
     refreshEditors,
+    request,
     shortcuts: {register: registerShortcut, dispatch: dispatchShortcut},
     panes: {
       list: () => panes,
@@ -3029,6 +3150,10 @@
   //   fields.validate(saved, tab, ids)  app fields restored from a record
   //   activate(tab, choices)            domain reaction to a switch
   //   afterActivate(tab, choices)       the same, after render and save
+  //   label(tab)                        optional exact tab label
+  //   saveDialog(tab)                   extra options for the save dialog
+  //   beforeSave(tab, {path})           false cancels; {path, base} redirects
+  //   deleteMessage(path)               replaces the delete confirmation
   //   loaded(tab), saved(tab)           keep app data in step
   //
   // A tab whose `load` answered `readonly` is read-only like a tab from
@@ -3113,6 +3238,10 @@
   //  each is unique or runs out of directories.
   function docLabels(name) {
     const tabs = docState.get(name).tabs;
+    const custom = docHooks(name).label;
+    if (custom) {
+      return new Map(tabs.map((tab) => [tab.id, String(custom(tab))]));
+    }
     const labels = new Map();
     const depth = new Map(tabs.map((tab) => [tab.id, 0]));
     const labelOf = (tab) => {
@@ -4141,7 +4270,9 @@
     if (docPaneReadOnly(name)) return undefined;
     const tab = docCapture(name);
     if (!tab) return undefined;
-    if (!tab.path && !tab.text) {
+    //  a store that redirects its own saves owns the empty-draft case:
+    //  creating an empty file is a legitimate save there
+    if (!tab.path && !tab.text && !docHooks(name).beforeSave) {
       notify(`Nothing to save in ${tab.label}.`);
       return undefined;
     }
@@ -4149,11 +4280,23 @@
     if (tab.path && !docTabCanSave(name, tab)) return undefined;
     let path = tab.path;
     if (choices.as || !path) {
-      path = await docFileDialog({mode: 'save', store: name, tab});
+      path = await docFileDialog({
+        ...docHooks(name).saveDialog?.(tab), mode: 'save', store: name, tab
+      });
       if (!path) return undefined;
     }
+    let prepared;
+    try {
+      prepared = await docHooks(name).beforeSave?.(tab, {path});
+    } catch (cause) {
+      docFailed(name, 'save', path, cause);
+      return undefined;
+    }
+    if (prepared === false || !docGet(name, tab.id)) return undefined;
+    if (prepared?.path) path = prepared.path;
     const text = tab.text;
-    let base = samePath(path, tab.path) ? tab.hash : null;
+    let base = prepared && Object.hasOwn(prepared, 'base')
+      ? prepared.base : samePath(path, tab.path) ? tab.hash : null;
     let overwrite = false;
     let saved;
     docEvent(name, 'save', 'start', path);
@@ -4199,21 +4342,43 @@
   }
 
   //  Tabs open on a deleted path keep their text as unsaved drafts.
-  async function docRemove(name, path) {
+  //  Confirmed batches can skip per-file prompts; quiet batches aggregate
+  //  errors and refresh trees themselves, but still update successful tabs.
+  //
+  //  `deleteMessage` lets a store whose deletes mean something other than
+  //  "gone for good" say so; without it the generic warning stands.
+  async function docRemove(name, path, choices = {}) {
     if (!Array.isArray(path) || docPaneReadOnly(name)) return false;
-    if (!await confirmDialog('delete', {path: pathText(path)})) return false;
-    docEvent(name, 'delete', 'start', path);
+    if (!choices.confirmed) {
+      const custom = docHooks(name).deleteMessage?.(path);
+      const asked = custom
+        ? await confirmDialog('delete-file', {message: custom})
+        : await confirmDialog('delete', {path: pathText(path)});
+      if (!asked) return false;
+    }
+    if (!choices.quiet) docEvent(name, 'delete', 'start', path);
     try {
       await docTransport.remove(path, {});
     } catch (cause) {
+      if (choices.quiet) throw cause;
       docFailed(name, 'delete', path, cause);
       return false;
     }
-    docEvent(name, 'delete', 'done', path);
+    if (!choices.quiet) docEvent(name, 'delete', 'done', path);
     const label = docBaseLabel(name, path);
+    docDeleted(name, [path]);
+    if (!choices.quiet) {
+      notify(`Deleted ${label}.`);
+      docRefreshTrees(name);
+    }
+    return true;
+  }
+
+  //  Apply confirmed server deletions locally, without another transport call.
+  function docDeleted(name, paths) {
+    docCapture(name);
     for (const tab of docTabs(name)) {
-      if (!samePath(tab.path, path)) continue;
-      if (tab.id === documentActiveId(name)) docCapture(name);
+      if (!paths.some(path => samePath(tab.path, path))) continue;
       tab.path = null;
       tab.draft = tab.label;
       tab.clean = '';
@@ -4224,9 +4389,6 @@
     docShow(name);
     docRender(name);
     changed();
-    notify(`Deleted ${label}.`);
-    docRefreshTrees(name);
-    return true;
   }
 
   //  ---- the tree
@@ -4649,7 +4811,14 @@
       accept();
     };
     showModal(docFileModal, opening ? cancel : pathInput);
-    fillList();
+    //  a store may replace the flat list with its own destination picker
+    if (request.browse && !opening) {
+      list.hidden = true;
+      extra.append(request.browse((value) => {
+        pathInput.value = value;
+        error.hidden = true;
+      }));
+    } else fillList();
     return done;
   }
 
@@ -4830,6 +4999,9 @@
       registerShortcut(`open:${name}`, () => docOpen(name));
       registerShortcut(`save:${name}`, () => docSave(name));
       registerShortcut(`save-as:${name}`, () => docSave(name, {as: true}));
+      //  Copy was the one store action with a button and no command,
+      //  which is why no app could bind it.
+      registerShortcut(`copy:${name}`, () => run.copy(name));
     }
     docElement('urui-confirm-ok')?.addEventListener('click', () => {
       docConfirm?.finish(true);
@@ -4855,6 +5027,7 @@
     open: docOpen,
     save: docSave,
     remove: docRemove,
+    deleted: docDeleted,
     dirty: docDirty,
     addRef: docAddRef,
     editor: (name) => docEditorsByStore.get(name),

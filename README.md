@@ -118,15 +118,26 @@ smallest.
 | Path | Owner | Consumer treatment |
 |---|---|---|
 | `desk/sur/urui.hoon`, `desk/lib/urui-*.hoon` | urui | synced regular files |
+| `desk/tests/lib/urui-*.hoon` | urui | synced suites for those libraries |
 | `desk/web/ace/` shared assets | urui | synced regular files |
 | `tests/browser/doubles/`, Ace shortcut inventory | urui | synced test support |
 | `.urui-sync.json` | sync tool | generated: urui revision and checksums |
 | consumer app/lib/tests, modes, manifests | consumer | never overwritten |
 | `tests/fixture/` | urui test harness | never shipped to consumers |
 
-[`bin/sync-manifest.txt`](bin/sync-manifest.txt) is the authoritative managed
-path list. The sync operation copies only those paths and removes only paths
-that it managed previously.
+The managed path list is computed by `manifest()` in
+[`bin/sync.py`](bin/sync.py); [`bin/sync-manifest.txt`](bin/sync-manifest.txt)
+is its **generated** record, rewritten on every sync, so editing that file
+changes nothing. The sync operation copies only managed paths and removes only
+paths it managed previously.
+
+`desk/tests/lib/urui-*.hoon` is matched by prefix on purpose. The suites for a
+synced library are part of that library: when `$shortcut` gained two fields,
+the libraries synced and these did not, and every consumer's desk failed to
+build while `--strict` still reported in sync. A consumer that needs a test
+case of its own puts it in a **consumer-named** file beside them --
+`desk/tests/lib/obelisk-urui.hoon` -- which the glob never matches, so it is
+neither synced nor checked against urui.
 
 Clone urui **beside** the consumer, then sync explicitly:
 
