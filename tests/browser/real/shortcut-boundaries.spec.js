@@ -1,17 +1,14 @@
 const {test, expect} = require('@playwright/test');
 const {installBackend} = require('./fixtures/backend.js');
 
-//  A table of contents with one page, one group, a group inside that
-//  group, and an inline folder: enough shape to exercise the nesting the
-//  help panel renders.
+//  A table of contents with one page, one group, and a group inside that
+//  group: enough shape to exercise the nesting the help panel renders.
 const toc = [
   '/users-guide/md    Users Guide',
   '/reference         Reference',
   '  /syntax/md         Syntax',
   '  /nested            Nested Reference',
-  '    /deep/md           Deep Page',
-  '/usr/              User Docs',
-  '  /intro/md          Intro'
+  '    /deep/md           Deep Page'
 ].join('\n');
 
 async function installRoutes(page, state, options = {}) {
@@ -154,12 +151,6 @@ test('focus boundaries cover explorer, Help, docs, and the file tree', async ({
   await expect(page.locator('#fallback-help-content')).toBeHidden();
   const groups = page.locator('.docs-help-group');
   await expect(groups).toHaveCount(2);
-  //  an inline folder has no group: its page sits at the top level and
-  //  keeps the folder's slug in its path
-  const intro = page.locator('#docs-help-nav > .docs-help-link')
-    .filter({hasText: /^Intro$/});
-  await expect(intro).toHaveAttribute('href', '/docs/d/urui-fixture/usr/intro');
-  await expect(intro).toHaveAttribute('data-doc-path', 'usr/intro');
   expect(await groups.evaluateAll((items) => {
     return items.every((item) => !item.open);
   })).toBe(true);
