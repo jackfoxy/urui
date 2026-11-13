@@ -209,6 +209,20 @@ module.exports = async (env) => {
   assert.equal(toc[0].title, 'Guide');
   assert.deepEqual(toc[1].children.map((entry) => entry.title), ['Colors']);
   assert.equal(toc[1].children.length, 1);
+  assert.equal(toc[1].inline, false);
+
+  //  a trailing slash marks an inline folder: it still nests its
+  //  entries, and the help nav lists them in its place
+  const inlineToc = explorer.docs.parseToc([
+    '/usr/          User Docs',
+    '  /guide/md      Guide',
+    '/about/md      About'
+  ].join('\n'));
+  assert.deepEqual(inlineToc.map((entry) => {
+    return [entry.slug, entry.folder, entry.inline];
+  }), [['usr', true, true], ['about', false, false]]);
+  assert.deepEqual(inlineToc[0].children.map((entry) => entry.slug),
+    ['guide']);
 
   //  a reference mirrors its document, and a second one shows the first
   const parent = docs.list('text')[0];

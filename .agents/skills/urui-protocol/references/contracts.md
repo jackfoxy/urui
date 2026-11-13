@@ -436,3 +436,6 @@ rules after all of them.
 
 `doc.toc` is an indented `/slug title` list: two spaces per level, one level
 of nesting, slugs matching `[A-Za-z0-9._~-]` with at most two segments.
+A folder written with a trailing slash (`/usr/  User Docs`) is inline: the
+help nav draws no group for it and lists its entries in its place, and their
+paths keep its slug (`usr/users-guide`).
